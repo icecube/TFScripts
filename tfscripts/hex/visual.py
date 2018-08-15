@@ -10,7 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 # tfscripts specific imports
-from tfscripts.hex.conv import get_rotated_corner_weights
+from tfscripts.hex.rotation import get_rotated_corner_weights
 
 # constants
 FLOAT_PRECISION = tf.float32
@@ -145,9 +145,9 @@ def plot_hex2D(hex_grid, file=None, hex_grid_spacing=1.0, norm='linear'):
 
     plt.axes().set_aspect('equal')
     if file is None:
-        plt.savefig(file)
-    else:
         plt.show()
+    else:
+        plt.savefig(file)
     plt.close(fig)
 
 
@@ -175,7 +175,7 @@ def visualize_rotated_hex_kernel(filter_size, num_rotations,
 
     num_rotations : int.
       number of rotational kernels to create.
-      Kernels will be rotated by 360°/num_rotations
+      Kernels will be rotated by 360 degrees / num_rotations
 
 
     file : str, optional

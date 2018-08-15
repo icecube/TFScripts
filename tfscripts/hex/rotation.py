@@ -231,7 +231,7 @@ def get_dynamic_rotation_hex_kernel(filter_size, azimuth):
                 [C[12], B[7], A[4], center_weight, A[1], B[1], C[3]], axis=1))
         rotated_kernel_rows.append(tf.stack(
                 [C[11], B[6], A[3], A[2], B[2], C[4], Z], axis=1))
-        rota    ted_kernel_rows.append(tf.stack(
+        rotated_kernel_rows.append(tf.stack(
             [C[10], B[5], B[4], B[3], C[5], Z, Z], axis=1))
         rotated_kernel_rows.append(tf.stack(
                 [C[9], C[8], C[7], C[6], Z, Z, Z], axis=1))

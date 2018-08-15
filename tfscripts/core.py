@@ -207,7 +207,7 @@ def activation(layer, activation_type,
     elif activation_type == 'gaussian':
         layer = tf.exp(-tf.square(layer))
 
-    elif activation_type = ='pgaussian':
+    elif activation_type == 'pgaussian':
         sigma = new_weights(layer.get_shape().as_list()[1:]) + \
                 tf.constant(1.0, dtype=FLOAT_PRECISION)
         mu = new_weights(layer.get_shape().as_list()[1:])
