@@ -282,7 +282,7 @@ def get_rotated_hex_kernel(filter_size, num_rotations):
 
     num_rotations : int.
       number of rotational kernels to create.
-      Kernels will be rotated by 360°/num_rotations
+      Kernels will be rotated by 360 degrees / num_rotations
 
     Returns
     -------
