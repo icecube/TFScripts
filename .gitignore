@@ -1,0 +1,7 @@
+*.pyc
+.DS_Store
+
+# exclude everything
+tfscripts.egg-info/*
+
+
