@@ -79,7 +79,7 @@ def new_kernel_weights(shape, stddev=0.01, name="weights"):
                        name=name, dtype=FLOAT_PRECISION)
 
 
-def new_biases(length, name='biases'):
+def new_biases(length, stddev=1.0, name='biases'):
     """Get new biases.
 
     Parameters
@@ -94,10 +94,14 @@ def new_biases(length, name='biases'):
     tf.Tensor
         A tensor with the biases.
     """
-    return tf.Variable(tf.random_normal(shape=[length],
-                                        stddev=2.0/length,
-                                        dtype=float_precision),
-                       name=name, dtype=float_precision)
+    return tf.Variable(tf.truncated_normal(shape=[length],
+                                           stddev=stddev,
+                                           dtype=FLOAT_PRECISION),
+                       name=name, dtype=FLOAT_PRECISION)
+    # return tf.Variable(tf.random_normal(shape=[length],
+    #                                     stddev=2.0/length,
+    #                                     dtype=FLOAT_PRECISION),
+    #                    name=name, dtype=FLOAT_PRECISION)
 
 
 def create_conv_nd_layers_weights(num_input_channels,
@@ -150,7 +154,8 @@ def create_conv_nd_layers_weights(num_input_channels,
         weight_name = 'weights_{}_{:03d}'.format(name, i)
         bias_name = 'biases_{}_{:03d}'.format(name, i)
 
-        weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
+        # weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
+        weights_list.append(new_weights(shape=shape, name=weight_name))
         biases_list.append(new_biases(length=num_filters, name=bias_name))
 
         # update number of input channels for next layer

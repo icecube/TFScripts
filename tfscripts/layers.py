@@ -325,7 +325,8 @@ def new_conv_nd_layer(input,
     # Create new weights aka. filters with the given shape.
     if method.lower() == 'convolution':
         if weights is None:
-            weights = new_kernel_weights(shape=shape)
+            # weights = new_kernel_weights(shape=shape)
+            weights = new_weights(shape=shape)
 
         # Create new biases, one for each filter.
         if biases is None:
@@ -460,18 +461,35 @@ def new_conv_nd_layer(input,
         raise ValueError('Unknown method: {!r}'.format(method))
 
     # repair to get std dev of 1
+    # In convolution operation, a matrix multiplication is performed
+    # over the image patch and the kernel. Afterwards, a reduce_sum
+    # is called. Assuming that all inputs and weights are normalized,
+    # the result of the matrix multiplication will approximately still
+    # have std dev 1.
+    # However, the reduce_sum operation over the filter size and number
+    # of input channels will add up
+    #   n = np.prod(filter_size) * num_input_channels
+    # variables which each have a std of 1. In the case of normal
+    # distributed values, this results in a resulting std deviation
+    # of np.sqrt(np.prod(filter_size) * num_input_channels). To ensure
+    # that the result of the convolutional layer is still normalized,
+    # the values need to be divided by this factor.
+    # In the case of the hex_convolution, this factor gets reduced to
+    # the number of non zero elements in the hex kernel.
     if method.lower() == 'hex_convolution':
-        # repair to get std dev of 1
-        layer = layer / np.sqrt(num_filters*num_rotations)
-        # (09.07.2018)
-        # layer = layer / np.sqrt(num_input_channels*num_rotations)
+
+        num_filter_vars = hx.get_num_hex_points(filter_size[0])
+        if len(filter_size) > 2:
+            num_filter_vars += np.prod(filter_size[2:])
+
+        layer = layer / np.sqrt(num_filter_vars * num_input_channels)
     else:
-        layer = layer / np.sqrt(num_input_channels)
+        layer = layer / np.sqrt(np.prod(filter_size) * num_input_channels)
 
     # Add the biases to the results of the convolution.
     # A bias-value is added to each filter-channel.
     if biases is not None:
-        layer += biases
+        layer = (layer + biases) / np.sqrt(2.)
 
     # Apply activation and batch normalisation
     layer = core.activation(layer, activation, use_batch_normalisation,
@@ -589,7 +607,7 @@ def new_fc_layer(input,
     # repair to get std dev of 1
     layer = layer / np.sqrt(num_inputs)
 
-    layer = layer + biases
+    layer = (layer + biases) / np.sqrt(2.)
 
     # Apply activation and batch normalisation
     layer = core.activation(layer, activation, use_batch_normalisation,
@@ -710,7 +728,7 @@ def new_channel_wise_fc_layer(input,
     # repair to get std dev of 1
     layer = layer / np.sqrt(num_inputs)
 
-    layer = layer + biases
+    layer = (layer + biases) / np.sqrt(2.)
 
     # Apply activation and batch normalisation
     layer = core.activation(layer, activation, use_batch_normalisation,
