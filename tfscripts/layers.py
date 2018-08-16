@@ -380,7 +380,7 @@ def new_conv_nd_layer(input,
 
         # Create new biases, one for each filter.
         if biases is None:
-            biases = new_biases(length=num_filters*num_rotations)
+            biases = new_biases(length=num_filters*hex_num_rotations)
 
     # -------------------
     # locally connected
@@ -923,7 +923,7 @@ def new_conv_nd_layers(input,
                        hex_num_rotations_list=1,
                        hex_azimuth_list=None,
                        hex_zero_out_list=False,
-                       name='conv{}_layer',
+                       name='conv_{}d_layer',
                        verbose=True,
                        ):
     '''
@@ -1096,7 +1096,7 @@ def new_conv_nd_layers(input,
 
     # check dimension of input
     num_dims = len(input.shape)
-    name = name.format(num_dims)
+    name = name.format(num_dims - 2)
     if num_dims == 6:
         # 4D convolution
         if pooling_strides_list is None:
