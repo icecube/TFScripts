@@ -354,7 +354,7 @@ def new_conv_nd_layer(input,
     # ---------------------
     elif method.lower() == 'hex_convolution':
         if num_dims == 2 or num_dims == 3:
-            layer, weights = hx.conv_hex(input_data=input_data,
+            layer, weights = hx.conv_hex(input_data=input,
                                          filter_size=filter_size,
                                          num_filters=num_filters,
                                          padding=padding,
@@ -366,7 +366,7 @@ def new_conv_nd_layer(input,
                                          kernel=weights,
                                          )
         elif num_dims == 4:
-            layer, weights = hx.conv_hex4d(input_data=input_data,
+            layer, weights = hx.conv_hex4d(input_data=input,
                                            filter_size=filter_size,
                                            num_filters=num_filters,
                                            padding=padding,
