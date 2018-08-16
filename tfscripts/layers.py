@@ -923,7 +923,7 @@ def new_conv_nd_layers(input,
                        hex_num_rotations_list=1,
                        hex_azimuth_list=None,
                        hex_zero_out_list=False,
-                       name='conv{num_dim}_layer',
+                       name='conv{}_layer',
                        verbose=True,
                        ):
     '''
@@ -1096,7 +1096,7 @@ def new_conv_nd_layers(input,
 
     # check dimension of input
     num_dims = len(input.shape)
-    name = name.format(num_dims=num_dims)
+    name = name.format(num_dims)
     if num_dims == 6:
         # 4D convolution
         if pooling_strides_list is None:

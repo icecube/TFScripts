@@ -107,7 +107,7 @@ def new_biases(length, stddev=1.0, name='biases'):
 def create_conv_nd_layers_weights(num_input_channels,
                                   filter_size_list,
                                   num_filters_list,
-                                  name='conv_{num_dims}d'):
+                                  name='conv_{}d'):
     '''Create weights and biases for conv 3d layers
 
     Parameters
@@ -139,7 +139,7 @@ def create_conv_nd_layers_weights(num_input_channels,
     '''
 
     num_dims = len(filter_size_list[0])
-    name = name.format(num_dims=num_dims)
+    name = name.format(num_dims)
 
     weights_list = []
     biases_list = []
