@@ -379,7 +379,7 @@ def new_conv_nd_layer(input,
 
         # Create new biases, one for each filter.
         if biases is None:
-            biases = tfs.new_biases(length=num_filters*num_rotations)
+            biases = new_biases(length=num_filters*num_rotations)
 
     # -------------------
     # locally connected
@@ -816,27 +816,27 @@ def new_fc_layers(input,
     ValueError
         Description
     '''
-    noOfLayers = len(fc_sizes)
+    num_layers = len(fc_sizes)
     if isinstance(activation_list, str):
-        activation_list = [activation_list for i in range(noOfLayers)]
+        activation_list = [activation_list for i in range(num_layers)]
     if use_dropout_list is False or use_dropout_list is True:
-        use_dropout_list = [use_dropout_list for i in range(noOfLayers)]
+        use_dropout_list = [use_dropout_list for i in range(num_layers)]
     # create batch normalisation array
     if isinstance(use_batch_normalisation_list, bool):
         use_batch_normalisation_list = [use_batch_normalisation_list
-                                        for i in range(noOfLayers)]
+                                        for i in range(num_layers)]
     # create use_residual_list
     if use_residual_list is False or use_residual_list is True:
-        use_residual_list = [use_residual_list for i in range(noOfLayers)]
+        use_residual_list = [use_residual_list for i in range(num_layers)]
     # create weights_list
     if weights_list is None:
-        weights_list = [None for i in range(noOfLayers)]
+        weights_list = [None for i in range(num_layers)]
     # create biases_list
     if biases_list is None:
-        biases_list = [None for i in range(noOfLayers)]
+        biases_list = [None for i in range(num_layers)]
     # create max out array
     if max_out_size_list is None:
-        max_out_size_list = [None for i in range(noOfLayers)]
+        max_out_size_list = [None for i in range(num_layers)]
 
     # pick which fc layers to build
     if len(input.get_shape().as_list()) == 3:
@@ -855,12 +855,12 @@ def new_fc_layers(input,
     layers = []
     weights = []
     biases = []
-    for i in range(noOfLayers):
+    for i in range(num_layers):
         if i == 0:
             previous_layer = input
         else:
             previous_layer = layers[i-1]
-        new_layer, new_weights, new_biases = new_fc_layer_func(
+        layer_i, weights_i, biases_i = new_fc_layer_func(
                     input=previous_layer,
                     num_outputs=fc_sizes[i],
                     activation=activation_list[i],
@@ -874,8 +874,10 @@ def new_fc_layers(input,
                     max_out_size=max_out_size_list[i],
                     )
         if verbose:
-            print('fc_layer_{:03d}'.format(i), new_layer)
-        layers.append(new_layer)
+            print('fc_layer_{:03d}'.format(i), layer_i)
+        layers.append(layer_i)
+        weights.append(weights_i)
+        biases.append(biases_i)
 
     return layers, weights, biases
 
@@ -1076,7 +1078,7 @@ def new_conv_nd_layers(input,
 
     # check dimension of input
     num_dims = len(input.shape)
-    name = name.format(num_dims)
+    name = name.format(num_dims=num_dims)
     if num_dims == 6:
         # 4D convolution
         if pooling_strides_list is None:
@@ -1107,103 +1109,103 @@ def new_conv_nd_layers(input,
         raise ValueError('Currently only 2D, 3D, or 4D supported {!r}'.format(
                                                                         input))
 
-    noOfLayers = len(num_filters_list)
+    num_layers = len(num_filters_list)
 
     # ---------------
     # Fill values
     # ---------------
     # create pooling_type_list
     if pooling_type_list is None or isinstance(pooling_type_list, str):
-        pooling_type_list = [pooling_type_list for i in range(noOfLayers)]
+        pooling_type_list = [pooling_type_list for i in range(num_layers)]
 
     # create pooling_strides_list
     if (len(np.array(pooling_strides_list).shape) == 1 and
             len(pooling_strides_list) == num_dims):
         pooling_strides_list = [pooling_strides_list
-                                for i in range(noOfLayers)]
+                                for i in range(num_layers)]
 
     # create pooling_ksize_list
     if (len(np.array(pooling_ksize_list).shape) == 1 and
             len(pooling_ksize_list) == num_dims):
-        pooling_ksize_list = [pooling_ksize_list for i in range(noOfLayers)]
+        pooling_ksize_list = [pooling_ksize_list for i in range(num_layers)]
 
     # create pooling_padding_list
     if pooling_padding_list == 'SAME' or pooling_padding_list == 'VALID':
         pooling_padding_list = [pooling_padding_list
-                                for i in range(noOfLayers)]
+                                for i in range(num_layers)]
 
     # create padding_list
     if padding_list == 'SAME' or padding_list == 'VALID':
-        padding_list = [padding_list for i in range(noOfLayers)]
+        padding_list = [padding_list for i in range(num_layers)]
 
     # create strides_list
     if (len(np.array(strides_list).shape) == 1 and
             len(strides_list) == num_dims):
-        strides_list = [strides_list for i in range(noOfLayers)]
+        strides_list = [strides_list for i in range(num_layers)]
 
     # create activation_list
     if isinstance(activation_list, str):
-        activation_list = [activation_list for i in range(noOfLayers)]
+        activation_list = [activation_list for i in range(num_layers)]
 
     # create batch normalisation array
     if isinstance(use_batch_normalisation_list, bool):
         use_batch_normalisation_list = [use_batch_normalisation_list
-                                        for i in range(noOfLayers)]
+                                        for i in range(num_layers)]
 
     # create dilation_rate_list
     if dilation_rate_list is None or (
         len(np.asarray(dilation_rate_list).shape) == 1 and
             len(dilation_rate_list) == num_dims - 2):
-        dilation_rate_list = [dilation_rate_list for i in range(noOfLayers)]
+        dilation_rate_list = [dilation_rate_list for i in range(num_layers)]
 
     # create use_residual_list
     if use_residual_list is False or use_residual_list is True:
-        use_residual_list = [use_residual_list for i in range(noOfLayers)]
+        use_residual_list = [use_residual_list for i in range(num_layers)]
 
     # create use_dropout_list
     if use_dropout_list is False or use_dropout_list is True:
-        use_dropout_list = [use_dropout_list for i in range(noOfLayers)]
+        use_dropout_list = [use_dropout_list for i in range(num_layers)]
 
     # create method_list
     if isinstance(method_list, str):
-        method_list = [method_list for i in range(noOfLayers)]
+        method_list = [method_list for i in range(num_layers)]
 
     # create weights_list
     if weights_list is None:
-        weights_list = [None for i in range(noOfLayers)]
+        weights_list = [None for i in range(num_layers)]
     # create biases_list
     if biases_list is None:
-        biases_list = [None for i in range(noOfLayers)]
+        biases_list = [None for i in range(num_layers)]
 
     # create trafo_list
     if trafo_list is None or len(trafo_list) == 1:
-        trafo_list = [trafo_list for i in range(noOfLayers)]
+        trafo_list = [trafo_list for i in range(num_layers)]
 
     # create hex_num_rotations_list
     if isinstance(hex_num_rotations_list, int):
         hex_num_rotations_list = [hex_num_rotations_list
-                                  for i in range(noOfLayers)]
+                                  for i in range(num_layers)]
 
     # create hex_azimuth_list
     if (hex_azimuth_list is None or
             tf.contrib.framework.is_tensor(hex_azimuth_list)):
-        hex_azimuth_list = [hex_azimuth_list for i in range(noOfLayers)]
+        hex_azimuth_list = [hex_azimuth_list for i in range(num_layers)]
 
     # create hex_zero out array
     if isinstance(hex_zero_out_list, bool):
-        hex_zero_out_list = [hex_zero_out_list for i in range(noOfLayers)]
+        hex_zero_out_list = [hex_zero_out_list for i in range(num_layers)]
     # ---------------
 
     # create layers:
     layers = []
     weights = []
     biases = []
-    for i in range(noOfLayers):
+    for i in range(num_layers):
         if i == 0:
             previous_layer = input
         else:
             previous_layer = layers[i-1]
-        new_layer, new_weights, new_biases = new_conv_nd_layer(
+        layer_i, weights_i, biases_i = new_conv_nd_layer(
                     input=previous_layer,
                     filter_size=filter_size_list[i],
                     num_filters=num_filters_list[i],
@@ -1229,9 +1231,9 @@ def new_conv_nd_layers(input,
                     hex_zero_out=hex_zero_out_list[i],
                     )
         if verbose:
-            print('{}_{:02d}'.format(name, i), new_layer)
-        layers.append(new_layer)
-        weights.append(new_weights)
-        biases.append(new_biases)
+            print('{}_{:02d}'.format(name, i), layer_i)
+        layers.append(layer_i)
+        weights.append(weights_i)
+        biases.append(biases_i)
 
     return layers, weights, biases

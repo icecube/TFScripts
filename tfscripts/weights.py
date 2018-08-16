@@ -34,8 +34,8 @@ def new_weights(shape, stddev=1.0, name="weights"):
     return tf.Variable(tf.truncated_normal(shape,
                                            stddev=stddev,
                                            dtype=FLOAT_PRECISION),
-                                           name=name,
-                                           dtype=FLOAT_PRECISION)
+                       name=name,
+                       dtype=FLOAT_PRECISION)
 
 
 def new_kernel_weights(shape, stddev=0.01, name="weights"):
@@ -100,102 +100,28 @@ def new_biases(length, name='biases'):
                        name=name, dtype=float_precision)
 
 
-def create_conv_layers_weights(num_input_channels,
-                               filter_size_list,
-                               num_filters_list,
-                               name="conv1d"):
-    ''' Create weights and biases for conv 1d layers
-
-    Parameters
-    ----------
-    num_input_channels : int
-        Number of channels of input layer.
-    filter_size_list : list of int
-        A list of int where each int is the filter size for that layer.
-    num_filters_list : list of int
-        A list of int where each int denotes the number of filters in
-        that layer.
-    name : str, optional
-        Name of weights and biases.
-
-    Returns
-    -------
-    list of tf.Tensor, list of tf.Tensor
-        Returns the list of weight and bias tensors for each layer
-    '''
-    weights_list = []
-    biases_list = []
-    for i, (filter_size, num_filters) in enumerate(zip(filter_size_list,
-                                                       num_filters_list)):
-        shape = [filter_size, 1, num_input_channels, num_filters]
-
-        weight_name = 'weights_{}_{:03d}'.format(name, i)
-        bias_name = 'biases_{}_{:03d}'.format(name, i)
-
-        weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
-        biases_list.append(new_biases(length=num_filters, name=bias_name))
-        num_input_channels = num_filters
-
-    return weights_list, biases_list
-
-
-def create_conv2d_layers_weights(num_input_channels,
-                                 filter_size_list,
-                                 num_filters_list,
-                                 name='conv2d'):
-    '''Create weights and biases for conv 2d layers
-
-    Parameters
-    ----------
-    num_input_channels : int
-        Number of channels of input layer.
-    filter_size_list : list of (int, int)
-        A list of tuples (int, int) which denote the filter size along the
-        x and y axis for each layer.
-
-    num_filters_list : list of int
-        A list of int where each int denotes the number of filters in
-        that layer.
-    name : str, optional
-        Name of weights and biases.
-
-    Returns
-    -------
-    list of tf.Tensor, list of tf.Tensor
-        Returns the list of weight and bias tensors for each layer
-    '''
-    weights_list = []
-    biases_list = []
-    for i, (filter_size, num_filters) in enumerate(zip(filter_size_list,
-                                                       num_filters_list)):
-        shape = [filter_size[0],
-                 filter_size[1],
-                 num_input_channels,
-                 num_filters]
-
-        weight_name = 'weights_{}_{:03d}'.format(name, i)
-        bias_name = 'biases_{}_{:03d}'.format(name, i)
-
-        weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
-        biases_list.append(new_biases(length=num_filters, name=bias_name))
-        num_input_channels = num_filters
-
-    return weights_list, biases_list
-
-
-def create_conv3d_layers_weights(num_input_channels,
-                                 filterXYZ_list,
-                                 num_filters_list,
-                                 name='conv3d'):
+def create_conv_nd_layers_weights(num_input_channels,
+                                  filter_size_list,
+                                  num_filters_list,
+                                  name='conv_{num_dims}d'):
     '''Create weights and biases for conv 3d layers
 
     Parameters
     ----------
     num_input_channels : int
         Number of channels of input layer.
-    filterXYZ_list : list of (int, int, int)
-        A list of tuples (int, int, int) which denote the filter size along the
-        x, y, and z axis for each layer.
+    filter_size_list : list of list of int
+        A list of filtersizes.
+        If a single filtersize is given, this will be used for every layer.
+        Otherwise, a filtersize must be given for each layer.
+        3D case:
+            Single: filtersize = [filter_x, filter_y, filter_z]
+            Multiple: [[x1, y1, z1], ... , [xn, yn, zn] ]
+                      where [xi, yi, zi] is the filter size of the ith layer.
+        2D case:
+            Single: filtersize = [filter_x, filter_y]
+            Multiple: [[x1, y1], ... , [xn, yn] ]
+                      where [xi, yi] is the filter size of the ith layer.
     num_filters_list : list of int
         A list of int where each int denotes the number of filters in
         that layer.
@@ -207,21 +133,27 @@ def create_conv3d_layers_weights(num_input_channels,
     list of tf.Tensor, list of tf.Tensor
         Returns the list of weight and bias tensors for each layer
     '''
+
+    num_dims = len(filter_size_list[0])
+    name = name.format(num_dims=num_dims)
+
     weights_list = []
     biases_list = []
-    for i, (filterXYZ, num_filters) in enumerate(zip(filterXYZ_list,
-                                                     num_filters_list)):
-        shape = [filterXYZ[0],
-                 filterXYZ[1],
-                 filterXYZ[2],
-                 num_input_channels,
-                 num_filters]
+    for i, (filter_size, num_filters) in enumerate(zip(filter_size_list,
+                                                       num_filters_list)):
+
+        # Shape of the filter-weights for the convolution.
+        shape = list(filter_size) + [num_input_channels, num_filters]
+        if num_dims == 1:
+            shape = shape.insert(1, 1)
 
         weight_name = 'weights_{}_{:03d}'.format(name, i)
         bias_name = 'biases_{}_{:03d}'.format(name, i)
 
         weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
         biases_list.append(new_biases(length=num_filters, name=bias_name))
+
+        # update number of input channels for next layer
         num_input_channels = num_filters
 
     return weights_list, biases_list

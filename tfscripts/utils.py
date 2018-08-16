@@ -11,7 +11,7 @@ import tensorflow as tf
 FLOAT_PRECISION = tf.float32
 
 
-def countParameters(var_list=None):
+def count_parameters(var_list=None):
     """Count number of trainable parameters
 
     Parameters
