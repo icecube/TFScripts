@@ -255,18 +255,18 @@ def batch_norm_wrapper(inputs, is_training, decay=0.99, epsilon=1e-6):
             The batch normalized input
     '''
     norm_shape = inputs.get_shape().as_list()[1:]
-    scale = tf.Variable(tf.ones(norm_shape, dtype=float_precision),
-                        name='BN_scale', dtype=float_precision)
-    beta = tf.Variable(tf.zeros(norm_shape,dtype=float_precision),
-                       name='BN_beta', dtype=float_precision)
-    pop_mean = tf.Variable(tf.zeros(norm_shape, dtype=float_precision),
+    scale = tf.Variable(tf.ones(norm_shape, dtype=FLOAT_PRECISION),
+                        name='BN_scale', dtype=FLOAT_PRECISION)
+    beta = tf.Variable(tf.zeros(norm_shape,dtype=FLOAT_PRECISION),
+                       name='BN_beta', dtype=FLOAT_PRECISION)
+    pop_mean = tf.Variable(tf.zeros(norm_shape, dtype=FLOAT_PRECISION),
                            trainable=False,
                            name='BN_pop_mean',
-                           dtype=float_precision)
-    pop_var = tf.Variable(tf.ones(norm_shape, dtype=float_precision),
+                           dtype=FLOAT_PRECISION)
+    pop_var = tf.Variable(tf.ones(norm_shape, dtype=FLOAT_PRECISION),
                           trainable=False,
                           name='BN_pop_var',
-                          dtype=float_precision)
+                          dtype=FLOAT_PRECISION)
 
     if is_training:
         batch_mean, batch_var = tf.nn.moments(inputs, [0], keepdims=False)
