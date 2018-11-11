@@ -269,7 +269,7 @@ def batch_norm_wrapper(inputs, is_training, decay=0.99, epsilon=1e-6):
                           dtype=FLOAT_PRECISION)
 
     if is_training:
-        batch_mean, batch_var = tf.nn.moments(inputs, [0], keepdims=False)
+        batch_mean, batch_var = tf.nn.moments(inputs, [0], keep_dims=False)
         train_mean = tf.assign(pop_mean,
                                pop_mean * decay + batch_mean * (1 - decay))
         train_var = tf.assign(pop_var,

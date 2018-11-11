@@ -760,7 +760,7 @@ def local_translational3d_trafo(input,
                     expanded_input = tf.expand_dims(input_patch, -1)
                     output_patch = tf.reduce_sum(expanded_input * weights,
                                                  axis=[1, 2, 3, 4],
-                                                 keepdims=False)
+                                                 keep_dims=False)
                 elif fcn is not None:
                     output_patch = fcn(input_patch)
 
@@ -1129,7 +1129,7 @@ def trans3d_op(input,
             output_patch = tf.reduce_sum(
                                     expanded_input_patches * sliced_filter,
                                     axis=[3, 4, 5, 6],
-                                    keepdims=False)
+                                    keep_dims=False)
             output.append(output_patch)
         # ------------------------------
         # Locally connected

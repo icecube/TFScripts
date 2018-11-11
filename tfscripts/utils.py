@@ -60,8 +60,8 @@ def get_angle(vec1, vec2, dtype=FLOAT_PRECISION):
     assert vec2.get_shape().as_list()[-1] == 3, \
         "Expect shape [?,3] or [3], but got {!r}".format(vec2.get_shape())
 
-    norm1 = tf.norm(vec1, axis=-1, keepdims=True)
-    norm2 = tf.norm(vec2, axis=-1, keepdims=True)
+    norm1 = tf.norm(vec1, axis=-1, keep_dims=True)
+    norm2 = tf.norm(vec2, axis=-1, keep_dims=True)
     tmp1 = vec1 * norm2
     tmp2 = vec2 * norm1
 
