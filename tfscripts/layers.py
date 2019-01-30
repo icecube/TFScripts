@@ -345,7 +345,7 @@ def new_conv_nd_layer(input,
         elif num_dims == 4:
             layer = conv.conv4d_stacked(input=input,
                                         filter=weights,
-                                        strides=strides[1:-1],
+                                        strides=strides,
                                         padding=padding,
                                         dilation_rate=dilation_rate)
 
