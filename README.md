@@ -2,5 +2,5 @@
 Some Functions for Tensorflow
 
 
-This Repository is intended to be used to share some functions for tensorflow such as a conv4D.
+This Repository is intended to be used to share some functions for tensorflow such as a conv4D or hexagonal convolutions.
 Let me know if you find these helpful or if you come across any bugs.
