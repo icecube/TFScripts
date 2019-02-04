@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from tfscripts.hex.rotation import get_rotated_corner_weights
 
 # constants
-FLOAT_PRECISION = tf.float32
+from tfscripts import FLOAT_PRECISION
 
 
 def print_hex_data(hex_data):

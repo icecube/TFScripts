@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 # constants
-FLOAT_PRECISION = tf.float32
+from tfscripts import FLOAT_PRECISION
 
 
 def new_weights(shape, stddev=1.0, name="weights"):

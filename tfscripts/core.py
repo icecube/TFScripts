@@ -13,7 +13,7 @@ import tensorflow as tf
 from tfscripts.weights import new_weights
 
 # constants
-FLOAT_PRECISION = tf.float32
+from tfscripts import FLOAT_PRECISION
 
 
 def add_residual(input, residual, strides=None, use_scale_factor=True,

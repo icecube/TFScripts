@@ -20,7 +20,7 @@ from tfscripts.hex.icecube import get_icecube_kernel
 from tfscripts.conv import dynamic_conv, conv4d_stacked
 
 # constants
-FLOAT_PRECISION = tf.float32
+from tfscripts import FLOAT_PRECISION
 
 
 def get_num_hex_points(edge_length):

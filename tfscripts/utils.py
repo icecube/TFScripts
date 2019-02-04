@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 # constants
-FLOAT_PRECISION = tf.float32
+from tfscripts import FLOAT_PRECISION
 
 
 def count_parameters(var_list=None):
