@@ -480,6 +480,11 @@ def new_conv_nd_layer(input,
 
         num_filter_vars = hx.get_num_hex_points(filter_size[0])
         if len(filter_size) > 2:
+            # This should probably be *= , but empirically this provides better
+            # results... [At least for IceCube applications]
+            # Possibly because variance is actually a lot lower in input, since
+            # it will be padded with zeros and these will propagate to later
+            # layers.
             num_filter_vars += np.prod(filter_size[2:])
 
         layer = layer / np.sqrt(num_filter_vars * num_input_channels)
