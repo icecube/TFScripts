@@ -7,6 +7,10 @@ from __future__ import division, print_function
 import numpy as np
 import tensorflow as tf
 import matplotlib
+try:
+    import _tkinter
+except ImportError:
+    matplotlib.use("AGG")
 import matplotlib.pyplot as plt
 
 # tfscripts specific imports
