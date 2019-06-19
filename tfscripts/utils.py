@@ -81,7 +81,8 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
     """Performs a 1-dimensional polynomial interpolation of degree 1 or 2
     along the specified axis.
 
-    x and y_ref must have the same shape in all, but the interpolation axis.
+    x and y_ref must have the same shape in all, but the interpolation axis
+    (Batch axis is also allowed to differ if it exists).
 
     This should be equivalent to
         tensorflow_probability.math.interp_regular_1d_grid
@@ -161,9 +162,15 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
     # --------------------------------
     #  Pick correct reference points y
     # --------------------------------
-    index_offset = np.tile(np.arange(np.prod(y_shape[:-1])) * nbins,
-                           x_shape[-1])
-    index_offset = np.reshape(index_offset, x_shape)
+    if y_shape[0] is None:
+        # Need to obtain y_ref shape dynamically in this case
+        index_offset = tf.tile(tf.arange(tf.prod(y_ref.shape()[:-1])) * nbins,
+                               x_shape[-1])
+        index_offset = tf.reshape(index_offset, x_shape)
+    else:
+        index_offset = np.tile(np.arange(np.prod(y_shape[:-1])) * nbins,
+                               x_shape[-1])
+        index_offset = np.reshape(index_offset, x_shape)
 
     y_ref_flat = tf.reshape(y_ref, [-1])
     indices_sel_offset = index_offset + indices_sel
