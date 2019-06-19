@@ -164,9 +164,10 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
     # --------------------------------
     if y_shape[0] is None:
         # Need to obtain y_ref shape dynamically in this case
-        index_offset = tf.tile(tf.arange(tf.prod(y_ref.shape()[:-1])) * nbins,
-                               x_shape[-1])
-        index_offset = tf.reshape(index_offset, x_shape)
+        index_offset = tf.tile(
+            tf.range(tf.math.reduce_prod(tf.shape(y_ref)[:-1])) * nbins,
+            tf.expand_dims(x_shape[-1], axis=-1))
+        index_offset = tf.reshape(index_offset, [-1] + x_shape[1:])
     else:
         index_offset = np.tile(np.arange(np.prod(y_shape[:-1])) * nbins,
                                x_shape[-1])
