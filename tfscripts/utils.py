@@ -142,7 +142,10 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
     nbins = y_shape[-1]
 
     # sanity checks to make sure shapes match
-    assert x_shape[:-1] == y_shape[:-1], '{!r} != {!r}'.format(
+    if x_shape[0] != y_shape[0]:
+        assert x_shape[0] is None or y_shape[0] is None, '{!r} != {!r}'.format(
+                                                x_shape[0], y_shape[0])
+    assert x_shape[1:-1] == y_shape[1:-1], '{!r} != {!r}'.format(
                                                 x_shape[:-1], y_shape[:-1])
 
     # We can take advantage of equidistant binning to compute indices
