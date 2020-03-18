@@ -11,9 +11,7 @@ with open(os.path.join(here, 'tfscripts', '__about__.py')) as fobj:
 setup(
     name='tfscripts',
     version=about['__version__'],
-    packages=[
-        'egenerator',
-    ],
+    packages=['tfscripts'],
     install_requires=[
         'numpy', 'matplotlib',
     ],
