@@ -16,6 +16,8 @@ before_install:
   - pip install -U pip
   - pip install -U -r test_requirements.txt
   - pip install -U -r requirements.txt
+  - py_version=$(python -c "import platform; print(platform.python_version())")
+  - if [[ $py_version == "2."* ]]; then pip install -U tensorflow==1.15.0; else pip install -U tensorflow==1.15.2; fi
 
 install:
   - pip install ".[test]" . # install package + test dependencies
