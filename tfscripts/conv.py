@@ -225,6 +225,7 @@ def get_conv_slice(position, input_length, filter_size, stride, dilation=1):
 def locally_connected_2d(input,
                          num_outputs,
                          filter_size,
+                         kernel=None,
                          strides=[1, 1],
                          padding='SAME',
                          dilation_rate=None):
@@ -238,13 +239,13 @@ def locally_connected_2d(input,
         float32, float64, int64, int32, uint8, uint16, int16, int8, complex64,
         complex128, qint8, quint8, qint32, half.
         Shape [batch, in_depth, in_height, in_width, in_channels].
-
     num_outputs : int
           Number of output channels
-
     filter_size : list of int of size 2
         [filter x size, filter y size]
-
+    kernel : tf.Tensor, optional
+        The kernel weights. If none are provided, new kernel weights will be
+        created.
     strides : A list of ints that has length = 2. 1-D tensor of length 2.
               The stride of the sliding window for each dimension of input.
     padding : A string from: "SAME", "VALID".
@@ -298,7 +299,8 @@ def locally_connected_2d(input,
     # ------------------
     # fast shortcut
     if list(filter_size) == [1, 1]:
-        kernel = new_weights(shape=input_shape[1:] + [num_outputs])
+        if kernel is None:
+            kernel = new_weights(shape=input_shape[1:] + [num_outputs])
         output = tf.reduce_sum(tf.expand_dims(input, axis=4) * kernel, axis=3)
         return output, kernel
 
@@ -381,7 +383,8 @@ def locally_connected_2d(input,
     # ------------------
     # get kernel
     # ------------------
-    kernel = new_weights(shape=kernel_shape)
+    if kernel is None:
+        kernel = new_weights(shape=kernel_shape)
 
     # ------------------
     # perform convolution
@@ -395,6 +398,7 @@ def locally_connected_2d(input,
 def locally_connected_3d(input,
                          num_outputs,
                          filter_size,
+                         kernel=None,
                          strides=[1, 1, 1],
                          padding='SAME',
                          dilation_rate=None):
@@ -407,19 +411,18 @@ def locally_connected_3d(input,
         float32, float64, int64, int32, uint8, uint16, int16, int8, complex64,
         complex128, qint8, quint8, qint32, half.
         Shape [batch, in_depth, in_height, in_width, in_channels].
-
     num_outputs : int
         Number of output channels
-
     filter_size : list of int of size 3
             [filter x size, filter y size, filter z size]
-
+    kernel : tf.Tensor, optional
+        The kernel weights. If none are provided, new kernel weights will be
+        created.
     strides : A list of ints that has length >= 5. 1-D tensor of length 5.
             The stride of the sliding window for each dimension of input.
             Must have strides[0] = strides[4] = 1.
     padding : A string from: "SAME", "VALID".
         The type of padding algorithm to use.
-
     dilation_rate : None or list of int of length 3
         [dilattion in x, dilation in y, dilation in z]
         defines dilattion rate to be used
@@ -467,7 +470,8 @@ def locally_connected_3d(input,
     # ------------------
     # fast shortcut
     if list(filter_size) == [1, 1, 1]:
-        kernel = new_weights(shape=input_shape[1:] + [num_outputs])
+        if kernel is None:
+            kernel = new_weights(shape=input_shape[1:] + [num_outputs])
         output = tf.reduce_sum(tf.expand_dims(input, axis=5) * kernel, axis=4)
         return output, kernel
 
@@ -569,7 +573,8 @@ def locally_connected_3d(input,
     # ------------------
     # get kernel
     # ------------------
-    kernel = new_weights(shape=kernel_shape)
+    if kernel is None:
+        kernel = new_weights(shape=kernel_shape)
 
     # ------------------
     # perform convolution

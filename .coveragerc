@@ -1,0 +1,9 @@
+# .coveragerc
+
+[run]
+branch = True
+source = tfscripts
+
+[report]
+
+omit = tfscripts/__about__.py
