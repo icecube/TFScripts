@@ -1,0 +1,9 @@
+# .coveragerc
+
+[run]
+branch = True
+source = egenerator
+
+[report]
+
+omit = egenerator/__about__.py
