@@ -2,8 +2,8 @@
 
 [run]
 branch = True
-source = egenerator
+source = tfscripts
 
 [report]
 
-omit = egenerator/__about__.py
+omit = tfscripts/__about__.py
