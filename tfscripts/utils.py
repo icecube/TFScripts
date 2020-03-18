@@ -28,7 +28,7 @@ def count_parameters(var_list=None):
         Number of parameters.
     """
     if var_list is None:
-        var_list = tf.trainable_variables()
+        var_list = tf.compat.v1.trainable_variables()
     return np.sum([np.prod(x.get_shape().as_list()) for x in var_list])
 
 
@@ -60,13 +60,13 @@ def get_angle(vec1, vec2, dtype=FLOAT_PRECISION):
     assert vec2.get_shape().as_list()[-1] == 3, \
         "Expect shape [?,3] or [3], but got {!r}".format(vec2.get_shape())
 
-    norm1 = tf.norm(vec1, axis=-1, keep_dims=True)
-    norm2 = tf.norm(vec2, axis=-1, keep_dims=True)
+    norm1 = tf.norm(tensor=vec1, axis=-1, keepdims=True)
+    norm2 = tf.norm(tensor=vec2, axis=-1, keepdims=True)
     tmp1 = vec1 * norm2
     tmp2 = vec2 * norm1
 
-    tmp3 = tf.norm(tmp1 - tmp2, axis=-1)
-    tmp4 = tf.norm(tmp1 + tmp2, axis=-1)
+    tmp3 = tf.norm(tensor=tmp1 - tmp2, axis=-1)
+    tmp4 = tf.norm(tensor=tmp1 + tmp2, axis=-1)
 
     theta = 2*tf.atan2(tmp3, tmp4)
     return theta
@@ -133,8 +133,8 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
         # Transpose if necessary: last axis corresponds to interp points
         perm = [i for i in range(len(y_ref.get_shape()))
                 if i != axis] + [axis]
-        y_ref = tf.transpose(y_ref, perm)
-        x = tf.transpose(x, perm)
+        y_ref = tf.transpose(a=y_ref, perm=perm)
+        x = tf.transpose(a=x, perm=perm)
 
     # get shapes and make sure they amtch
     y_shape = y_ref.get_shape().as_list()
@@ -168,7 +168,7 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
     if y_shape[0] is None or x_shape[0] is None:
         # Need to obtain y_ref shape dynamically in this case
         index_offset = tf.tile(
-            tf.range(tf.math.reduce_prod(tf.shape(y_ref)[:-1])) * nbins,
+            tf.range(tf.math.reduce_prod(input_tensor=tf.shape(input=y_ref)[:-1])) * nbins,
             tf.expand_dims(x_shape[-1], axis=-1))
         index_offset = tf.reshape(index_offset, [-1] + x_shape[1:])
     else:
@@ -209,21 +209,21 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
                                                         polynomial_order))
 
     if fill_value is None:
-        result = tf.where(lower_boundary,
+        result = tf.compat.v1.where(lower_boundary,
                           tf.zeros_like(result)
                           + tf.expand_dims(y_ref[..., 0], axis=-1),
                           result)
-        result = tf.where(upper_boundary,
+        result = tf.compat.v1.where(upper_boundary,
                           tf.zeros_like(result)
                           + tf.expand_dims(y_ref[..., -1], axis=-1),
                           result)
     else:
-        result = tf.where(tf.logical_or(lower_boundary, upper_boundary),
+        result = tf.compat.v1.where(tf.logical_or(lower_boundary, upper_boundary),
                           tf.zeros_like(result) + fill_value,
                           result)
 
     if axis != -1:
         # Transpose back if necessary
-        result = tf.transpose(result, perm)
+        result = tf.transpose(a=result, perm=perm)
 
     return result

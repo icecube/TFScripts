@@ -301,7 +301,7 @@ def locally_connected_2d(input,
     if list(filter_size) == [1, 1]:
         if kernel is None:
             kernel = new_weights(shape=input_shape[1:] + [num_outputs])
-        output = tf.reduce_sum(tf.expand_dims(input, axis=4) * kernel, axis=3)
+        output = tf.reduce_sum(input_tensor=tf.expand_dims(input, axis=4) * kernel, axis=3)
         return output, kernel
 
     # ------------------
@@ -364,7 +364,7 @@ def locally_connected_2d(input,
                 # pad with zeros
                 paddings = [(0, 0), padding_x, padding_y, (0, 0)]
                 if paddings != [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]:
-                    input_patch = tf.pad(input_patch,
+                    input_patch = tf.pad(tensor=input_patch,
                                          paddings=paddings,
                                          mode='CONSTANT',
                                          )
@@ -390,7 +390,7 @@ def locally_connected_2d(input,
     # perform convolution
     # ------------------
     output = input_patches * kernel
-    output = tf.reduce_sum(output, axis=2)
+    output = tf.reduce_sum(input_tensor=output, axis=2)
     output = tf.reshape(output, output_shape)
     return output, kernel
 
@@ -472,7 +472,7 @@ def locally_connected_3d(input,
     if list(filter_size) == [1, 1, 1]:
         if kernel is None:
             kernel = new_weights(shape=input_shape[1:] + [num_outputs])
-        output = tf.reduce_sum(tf.expand_dims(input, axis=5) * kernel, axis=4)
+        output = tf.reduce_sum(input_tensor=tf.expand_dims(input, axis=5) * kernel, axis=4)
         return output, kernel
 
     # ------------------
@@ -554,7 +554,7 @@ def locally_connected_3d(input,
                     paddings = [(0, 0), padding_x, padding_y,
                                 padding_z, (0, 0)]
                     if paddings != [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]:
-                        input_patch = tf.pad(input_patch,
+                        input_patch = tf.pad(tensor=input_patch,
                                              paddings=paddings,
                                              mode='CONSTANT',
                                              )
@@ -580,7 +580,7 @@ def locally_connected_3d(input,
     # perform convolution
     # ------------------
     output = input_patches * kernel
-    output = tf.reduce_sum(output, axis=2)
+    output = tf.reduce_sum(input_tensor=output, axis=2)
     output = tf.reshape(output, output_shape)
     return output, kernel
 
@@ -752,7 +752,7 @@ def local_translational3d_trafo(input,
                     paddings = [(0, 0), padding_x, padding_y,
                                 padding_z, (0, 0)]
                     if paddings != [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]:
-                        input_patch = tf.pad(input_patch,
+                        input_patch = tf.pad(tensor=input_patch,
                                              paddings=paddings,
                                              mode='CONSTANT',
                                              )
@@ -763,9 +763,9 @@ def local_translational3d_trafo(input,
 
                 if weights is not None:
                     expanded_input = tf.expand_dims(input_patch, -1)
-                    output_patch = tf.reduce_sum(expanded_input * weights,
+                    output_patch = tf.reduce_sum(input_tensor=expanded_input * weights,
                                                  axis=[1, 2, 3, 4],
-                                                 keep_dims=False)
+                                                 keepdims=False)
                 elif fcn is not None:
                     output_patch = fcn(input_patch)
 
@@ -845,7 +845,7 @@ def dynamic_conv(
     assert filter_shape[0] == input_shape[0]
 
     if batch_size is None:
-        batch_size = tf.shape(input)[0]
+        batch_size = tf.shape(input=input)[0]
 
         try:
             batch_size = dynamic_conv.BATCH_SIZE
@@ -862,11 +862,11 @@ def dynamic_conv(
     output_list = []
     for split_input, split_filter in zip(split_inputs, split_filters):
         output_list.append(
-              tf.nn.convolution(split_input,
-                                split_filter,
+              tf.nn.convolution(input=split_input,
+                                filters=split_filter,
                                 strides=strides,
                                 padding=padding,
-                                dilation_rate=dilation_rate,
+                                dilations=dilation_rate,
                                 )
           )
     output = tf.concat(output_list, axis=0)
@@ -1077,8 +1077,8 @@ def trans3d_op(input,
             # [batch, filter_x, filter_y, in_channel]
             # input_patches has shape:
             # [batch, x,y, filter_x*filter_y*in_channel]
-            input_s_patches = tf.extract_image_patches(input_s,
-                                                       ksizes=ksizes,
+            input_s_patches = tf.image.extract_patches(input_s,
+                                                       sizes=ksizes,
                                                        strides=strides2d,
                                                        rates=rates,
                                                        padding=padding)
@@ -1132,9 +1132,9 @@ def trans3d_op(input,
                                 - padding_s[0])
             sliced_filter = tf.slice(filter, begin, size)
             output_patch = tf.reduce_sum(
-                                    expanded_input_patches * sliced_filter,
+                                    input_tensor=expanded_input_patches * sliced_filter,
                                     axis=[3, 4, 5, 6],
-                                    keep_dims=False)
+                                    keepdims=False)
             output.append(output_patch)
         # ------------------------------
         # Locally connected
@@ -1239,7 +1239,7 @@ def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
                 for j, index_z_i in enumerate(indices_z_s):
                     tensors_z_convoluted.append(
                                 tf.nn.conv2d(input=tensors_z[index_z_i],
-                                             filter=kernel_z[j],
+                                             filters=kernel_z[j],
                                              strides=strides[:3]+strides[4:],
                                              padding=padding)
                                 )
@@ -1258,7 +1258,7 @@ def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
                 if 0 <= j < size_of_z_dim:
                     tensors_z_convoluted.append(
                                 tf.nn.conv2d(input=tensors_z[j],
-                                             filter=kernel_z[kernel_j],
+                                             filters=kernel_z[kernel_j],
                                              strides=strides[:3]+strides[4:],
                                              padding=padding)
                                 )
@@ -1394,18 +1394,18 @@ def conv4d_stacked(input, filter,
                             tensors_t_convoluted.append(
                                 tf.nn.convolution(
                                     input=tensors_t[index_t_i],
-                                    filter=kernel_t[j],
+                                    filters=kernel_t[j],
                                     strides=(strides[1:stack_axis+1]
                                              + strides[stack_axis:5]),
                                     padding=padding,
-                                    dilation_rate=(
+                                    dilations=(
                                             dilation_rate[:stack_axis-1]
                                             + dilation_rate[stack_axis:]))
                                 )
                         else:
                             tensors_t_convoluted.append(
                                 tf.nn.conv3d(input=tensors_t[index_t_i],
-                                             filter=kernel_t[j],
+                                             filters=kernel_t[j],
                                              strides=(strides[:stack_axis] +
                                                       strides[stack_axis+1:]),
                                              padding=padding)
@@ -1436,18 +1436,18 @@ def conv4d_stacked(input, filter,
                             tensors_t_convoluted.append(
                                 tf.nn.convolution(
                                     input=tensors_t[j],
-                                    filter=kernel_t[kernel_j],
+                                    filters=kernel_t[kernel_j],
                                     strides=(strides[1:stack_axis+1] +
                                              strides[stack_axis:5]),
                                     padding=padding,
-                                    dilation_rate=(
+                                    dilations=(
                                         dilation_rate[:stack_axis-1] +
                                         dilation_rate[stack_axis:]))
                                 )
                         else:
                             tensors_t_convoluted.append(
                                 tf.nn.conv3d(input=tensors_t[j],
-                                             filter=kernel_t[kernel_j],
+                                             filters=kernel_t[kernel_j],
                                              strides=(strides[:stack_axis] +
                                                       strides[stack_axis+1:]),
                                              padding=padding)
@@ -1464,16 +1464,16 @@ def conv4d_stacked(input, filter,
                 if dilation_rate is not None:
                     result_patch = tf.nn.convolution(
                                 input=input_patch,
-                                filter=kernel_patch,
+                                filters=kernel_patch,
                                 strides=(strides[1:stack_axis] +
                                          strides[stack_axis+1:5]),
                                 padding=padding,
-                                dilation_rate=(dilation_rate[:stack_axis-1] +
+                                dilations=(dilation_rate[:stack_axis-1] +
                                                dilation_rate[stack_axis:]))
                 else:
                     result_patch = tf.nn.conv3d(
                                             input=input_patch,
-                                            filter=kernel_patch,
+                                            filters=kernel_patch,
                                             strides=(strides[:stack_axis] +
                                                      strides[stack_axis+1:]),
                                             padding=padding)

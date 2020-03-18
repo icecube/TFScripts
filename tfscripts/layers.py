@@ -338,10 +338,10 @@ def new_conv_nd_layer(input,
     if method.lower() == 'convolution':
         if num_dims == 2 or num_dims == 3:
             layer = tf.nn.convolution(input=input,
-                                      filter=weights,
+                                      filters=weights,
                                       strides=strides[1:-1],
                                       padding=padding,
-                                      dilation_rate=dilation_rate)
+                                      dilations=dilation_rate)
         elif num_dims == 4:
             layer = conv.conv4d_stacked(input=input,
                                         filter=weights,
@@ -537,7 +537,7 @@ def new_conv_nd_layer(input,
         raise NotImplementedError('Only supported 2d, 3d, 4d!')
 
     if use_dropout:
-        layer = tf.nn.dropout(layer, keep_prob)
+        layer = tf.nn.dropout(layer, 1 - (keep_prob))
 
     return layer, weights, biases
 
@@ -643,7 +643,7 @@ def new_fc_layer(input,
                                   )
 
     if use_dropout:
-        layer = tf.nn.dropout(layer, keep_prob)
+        layer = tf.nn.dropout(layer, 1 - (keep_prob))
 
     return layer, weights, biases
 
@@ -715,7 +715,7 @@ def new_channel_wise_fc_layer(input,
     num_channels = input_shape[2]
 
     # input_transpose: [num_channel, batch, num_inputs]
-    input_transpose = tf.transpose(input, [2, 0, 1])
+    input_transpose = tf.transpose(a=input, perm=[2, 0, 1])
 
     # Create new weights and biases.
     if weights is None:
@@ -727,7 +727,7 @@ def new_channel_wise_fc_layer(input,
     # the input and weights, and then add the bias-values.
     # output: [num_channel, batch, num_outputs]
     output = tf.matmul(input_transpose, weights)
-    layer = tf.transpose(output, [1, 2, 0])
+    layer = tf.transpose(a=output, perm=[1, 2, 0])
     # layer: [batch, num_outputs, num_channel]
 
     # repair to get std dev of 1
@@ -742,11 +742,11 @@ def new_channel_wise_fc_layer(input,
     # Use as Residual
     if use_residual:
         # convert to [batch, num_channel, num_outputs]
-        layer = tf.transpose(layer, [0, 2, 1])
-        layer = core.add_residual(input=tf.transpose(input, [0, 2, 1]),
+        layer = tf.transpose(a=layer, perm=[0, 2, 1])
+        layer = core.add_residual(input=tf.transpose(a=input, perm=[0, 2, 1]),
                                   residual=layer)
         # convert back to [batch, num_outputs, num_channel]
-        layer = tf.transpose(layer, [0, 2, 1])
+        layer = tf.transpose(a=layer, perm=[0, 2, 1])
 
     if max_out_size is not None:
         layer = tf.contrib.layers.maxout(
@@ -756,7 +756,7 @@ def new_channel_wise_fc_layer(input,
                                       )
 
     if use_dropout:
-        layer = tf.nn.dropout(layer, keep_prob)
+        layer = tf.nn.dropout(layer, 1 - (keep_prob))
 
     return layer, weights, biases
 
@@ -1211,7 +1211,7 @@ def new_conv_nd_layers(input,
 
     # create hex_azimuth_list
     if (hex_azimuth_list is None or
-            tf.contrib.framework.is_tensor(hex_azimuth_list)):
+            tf.is_tensor(hex_azimuth_list)):
         hex_azimuth_list = [hex_azimuth_list for i in range(num_layers)]
 
     # create hex_zero out array

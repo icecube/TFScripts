@@ -31,7 +31,7 @@ def new_weights(shape, stddev=1.0, name="weights"):
     tf.Tensor
         A tensor with the weights.
     """
-    return tf.Variable(tf.truncated_normal(shape,
+    return tf.Variable(tf.random.truncated_normal(shape,
                                            stddev=stddev,
                                            dtype=FLOAT_PRECISION),
                        name=name,
@@ -94,7 +94,7 @@ def new_biases(length, stddev=1.0, name='biases'):
     tf.Tensor
         A tensor with the biases.
     """
-    return tf.Variable(tf.truncated_normal(shape=[length],
+    return tf.Variable(tf.random.truncated_normal(shape=[length],
                                            stddev=stddev,
                                            dtype=FLOAT_PRECISION),
                        name=name, dtype=FLOAT_PRECISION)

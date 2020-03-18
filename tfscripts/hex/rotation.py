@@ -72,7 +72,7 @@ def tf_get_rotated_corner_weights(corner_weights, azimuth):
     degree_steps = 360.0 / size
 
     a = tf.reshape(azimuth % degree_steps,
-                   [tf.shape(azimuth)[0]] + [1]*num_dims)
+                   [tf.shape(input=azimuth)[0]] + [1]*num_dims)
     b = tf.cast(azimuth / degree_steps, tf.int32)
     rotatedcorner_weights = []
     for i in range(size):
@@ -81,8 +81,8 @@ def tf_get_rotated_corner_weights(corner_weights, azimuth):
         index_2 = i - b - 1
 
         # correct negative indices
-        index_1 = tf.where(index_1 < 0, size + index_1, index_1)
-        index_2 = tf.where(index_2 < 0, size + index_2, index_2)
+        index_1 = tf.compat.v1.where(index_1 < 0, size + index_1, index_1)
+        index_2 = tf.compat.v1.where(index_2 < 0, size + index_2, index_2)
 
         newCorner_i = (tf.gather(corner_weights, index_1) + a / degree_steps *
                        (tf.gather(corner_weights, index_2) -
@@ -147,10 +147,10 @@ def get_dynamic_rotation_hex_kernel(filter_size, azimuth):
     no_of_dims = len(filter_size)
     rotated_filter_size = filter_size[2:-1] + [filter_size[-1]]
 
-    Z = tf.zeros([tf.shape(azimuth)[0]] + filter_size[2:],
+    Z = tf.zeros([tf.shape(input=azimuth)[0]] + filter_size[2:],
                  dtype=FLOAT_PRECISION)
     center_weight = new_weights([1] + filter_size[2:])
-    multiples = [tf.shape(azimuth)[0]] + [1]*(no_of_dims - 2)
+    multiples = [tf.shape(input=azimuth)[0]] + [1]*(no_of_dims - 2)
     center_weight = tf.tile(center_weight, multiples)
 
     # HARDCODE MAGIC... ToDo: Generalize

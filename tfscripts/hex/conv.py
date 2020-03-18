@@ -341,10 +341,10 @@ def conv_hex(input_data,
                             )
     else:
         result = tf.nn.convolution(input=input_data,
-                                   filter=kernel,
+                                   filters=kernel,
                                    strides=strides[1:-1],
                                    padding=padding,
-                                   dilation_rate=dilation_rate)
+                                   dilations=dilation_rate)
 
     # zero out elements that don't belong on hexagon or IceCube Strings
     if zero_out:
@@ -590,7 +590,7 @@ def create_conv_hex_layers_weights(num_input_channels,
         num_rotations_list = [num_rotations_list for i
                               in range(len(num_filters_list))]
     # create azimuth_list
-    if azimuth_list is None or tf.contrib.framework.is_tensor(azimuth_list):
+    if azimuth_list is None or tf.is_tensor(azimuth_list):
         azimuth_list = [azimuth_list for i in range(noOfLayers)]
 
     weights_list = []

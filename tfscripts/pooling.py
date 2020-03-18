@@ -111,21 +111,21 @@ def pool(layer, ksize, strides, padding, pooling_type):
 
     # Use pooling to down-sample the image resolution?
     if pooling_type == 'max':
-        layer = tf.nn.max_pool(value=layer,
+        layer = tf.nn.max_pool2d(input=layer,
                                ksize=ksize,
                                strides=strides,
                                padding=padding)
     elif pooling_type == 'avg':
-        layer = tf.nn.avg_pool(value=layer,
+        layer = tf.nn.avg_pool2d(input=layer,
                                ksize=ksize,
                                strides=strides,
                                padding=padding)
     elif pooling_type == 'max_avg':
-        layer_max = tf.nn.max_pool(value=layer,
+        layer_max = tf.nn.max_pool2d(input=layer,
                                    ksize=ksize,
                                    strides=strides,
                                    padding=padding)
-        layer_avg = tf.nn.avg_pool(value=layer,
+        layer_avg = tf.nn.avg_pool2d(input=layer,
                                    ksize=ksize,
                                    strides=strides,
                                    padding=padding)
@@ -189,10 +189,10 @@ def pool_over_depth(layer, ksize, stride, padding, pooling_type):
         # Get input patch at filter position c
         # ------------------------------------------
         if pooling_type == 'max':
-            input_patches.append(tf.reduce_max(layer[..., slice_c], axis=-1))
+            input_patches.append(tf.reduce_max(input_tensor=layer[..., slice_c], axis=-1))
 
         elif pooling_type == 'avg':
-            input_patches.append(tf.reduce_mean(layer[..., slice_c], axis=-1))
+            input_patches.append(tf.reduce_mean(input_tensor=layer[..., slice_c], axis=-1))
 
         else:
             raise ValueError('Pooling_type {!r} is unknown.'.format(
@@ -339,7 +339,7 @@ def avg_pool4d_stacked(input, ksize, strides, padding):
                                             strides=strides[:4]+strides[5:],
                                             padding=padding)
                                             )
-                    avg_tensors_t_s = tf.div(tf.add_n(tensors_t_averaged),
+                    avg_tensors_t_s = tf.compat.v1.div(tf.add_n(tensors_t_averaged),
                                              len_ts)
 
                     # put together
@@ -359,7 +359,7 @@ def avg_pool4d_stacked(input, ksize, strides, padding):
                                              strides=strides[:4]+strides[5:],
                                              padding=padding)
                                              )
-                avg_tensors_t_s = tf.div(tf.add_n(tensors_t_averaged), len_ts)
+                avg_tensors_t_s = tf.compat.v1.div(tf.add_n(tensors_t_averaged), len_ts)
 
                 # put together
                 result_t.append(avg_tensors_t_s)
