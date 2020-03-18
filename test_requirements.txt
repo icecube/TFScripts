@@ -1,3 +1,2 @@
 coverage
 codecov
-tensorflow==1.15
