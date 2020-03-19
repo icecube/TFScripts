@@ -1,4 +1,4 @@
-__version__ = "0.1.0-dev"
+__version__ = "0.2.0"
 __author__ = "Mirco Huennefeld"
 __author_email__ = "mirco.huennefeld@tu-dortmund.de"
 __description__ = "Collection of TF functions and helpful additions"
