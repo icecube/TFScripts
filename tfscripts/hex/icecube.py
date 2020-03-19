@@ -138,7 +138,7 @@ def get_icecube_string_from_hex_coord(a, b):
     return hex_string_coord_dict[(a, b)]
 
 
-def get_icecube_kernel(shape, get_ones=False):
+def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
     '''
     Get a kernel of shape 'shape' for IceCube where coordinates of no real
     strings are set to constant zeros.
@@ -152,14 +152,16 @@ def get_icecube_kernel(shape, get_ones=False):
         If True, returns constant ones for real DOMs, zeros for virtual DOMs.
         If False, return trainable parameter for real DOMs,
                 zeros for virtual DOMs
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
     tf.Tensor
         The icecube kernel with the desired shape.
     '''
-    zeros = tf.zeros(shape, dtype=FLOAT_PRECISION)
-    ones = tf.ones(shape, dtype=FLOAT_PRECISION)
+    zeros = tf.zeros(shape, dtype=float_precision)
+    ones = tf.ones(shape, dtype=float_precision)
 
     a_list = []
     for a in xrange(-4, 6):
@@ -172,7 +174,8 @@ def get_icecube_kernel(shape, get_ones=False):
                 if get_ones:
                     weights = ones
                 else:
-                    weights = new_weights(shape)
+                    weights = new_weights(shape,
+                                          float_precision=float_precision)
             else:
                 # virtual string, string does not actually exist
                 weights = zeros

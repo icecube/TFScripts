@@ -72,7 +72,8 @@ def hex_distance(h1, h2):
     return (abs(a1 - a2) + abs(b1 - b2) + abs(c1 - c2)) / 2
 
 
-def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
+def get_hex_kernel(filter_size, print_kernel=False, get_ones=False,
+                   float_precision=FLOAT_PRECISION):
     '''Get hexagonal convolution kernel
 
     Create Weights for a hexagonal kernel.
@@ -130,6 +131,8 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
         If False, return trainable tf.tensor for elements in hexagon.
         In both cases, constant zeros are returned for elements outside of
         hexagon.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -156,8 +159,8 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
     else:
         kernel_edge_points = 2*k + 1
 
-    zeros = tf.zeros(filter_size[2:], dtype=FLOAT_PRECISION)
-    ones = tf.ones(filter_size[2:], dtype=FLOAT_PRECISION)
+    zeros = tf.zeros(filter_size[2:], dtype=float_precision)
+    ones = tf.ones(filter_size[2:], dtype=float_precision)
 
     a_list = []
     test_hex_dict = {}
@@ -176,7 +179,8 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
                     if get_ones:
                         weights = ones
                     else:
-                        weights = new_weights(filter_size[2:])
+                        weights = new_weights(filter_size[2:],
+                                              float_precision=float_precision)
                     test_hex_dict[(a, b)] = 1
 
             # -------------------------
@@ -211,7 +215,8 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
                     if get_ones:
                         weights = ones
                     else:
-                        weights = new_weights(filter_size[2:])
+                        weights = new_weights(filter_size[2:],
+                                              float_precision=float_precision)
                     test_hex_dict[(a, b)] = 1
                 else:
                     weights = zeros
@@ -235,6 +240,7 @@ def conv_hex(input_data,
              zero_out=False,
              kernel=None,
              azimuth=None,
+             float_precision=FLOAT_PRECISION,
              ):
     """Convolve a hex2d or hex3d layer (2d hex + 1d cartesian)
 
@@ -295,12 +301,14 @@ def conv_hex(input_data,
         If True, elements in result tensor which are not part of hexagon or
         IceCube strings (if shape in x and y dimensions is 10x10), will be
         set to zero.
-    kernel :  None or tf.Tensor, optional
+    kernel : None or tf.Tensor, optional
         Optionally, the weights to be used as the kernel can be provided.
         If None, new kernel weights are created.
     azimuth : float or scalar float tf.Tensor
         Hexagonal kernel is turned by the angle 'azimuth' [given in degrees]
         in counterclockwise direction
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -322,19 +330,22 @@ def conv_hex(input_data,
     if kernel is None:
         if azimuth is not None and filter_size[:2] != [1, 0]:
             kernel = rotation.get_dynamic_rotation_hex_kernel(
-                            filter_size+[num_channels, num_filters], azimuth)
+                            filter_size+[num_channels, num_filters], azimuth,
+                            float_precision=float_precision)
         else:
             if num_rotations > 1:
                 kernel = rotation.get_rotated_hex_kernel(
-                        filter_size+[num_channels, num_filters], num_rotations)
+                        filter_size+[num_channels, num_filters], num_rotations,
+                        float_precision=float_precision)
             else:
                 kernel = get_hex_kernel(
-                                filter_size+[num_channels, num_filters])
+                                filter_size+[num_channels, num_filters],
+                                float_precision=float_precision)
 
     if azimuth is not None and filter_size[:2] != [1, 0]:
         result = dynamic_conv(
-                            input=input_data,
-                            filter=kernel,
+                            inputs=input_data,
+                            filters=kernel,
                             strides=strides[1:-1],
                             padding=padding,
                             dilation_rate=dilation_rate,
@@ -355,7 +366,8 @@ def conv_hex(input_data,
 
             zero_out_matrix = get_icecube_kernel(
                                             result.get_shape().as_list()[3:],
-                                            get_ones=True)
+                                            get_ones=True,
+                                            float_precision=float_precision)
             result = result*zero_out_matrix
 
         else:
@@ -364,7 +376,8 @@ def conv_hex(input_data,
                                 [(result.get_shape().as_list()[1]+1) // 2, 0,
                                  result.get_shape().as_list()[3],
                                  num_filters*num_rotations],
-                                get_ones=True)
+                                get_ones=True,
+                                float_precision=float_precision)
             if result.get_shape()[1:] == zero_out_matrix.get_shape():
                 result = result*zero_out_matrix
             else:
@@ -393,7 +406,8 @@ def conv_hex4d(input_data,
                kernel=None,
                azimuth=None,
                stack_axis=None,
-               zero_out=False):
+               zero_out=False,
+               float_precision=FLOAT_PRECISION):
     """Convolve a hex4d layer (2d hex + 1d cartesian + 1d time)
 
     Parameters
@@ -450,7 +464,7 @@ def conv_hex4d(input_data,
         The dilation rate to be used for the layer.
         Dilation rate is given by: [dilation_x, dilation_y, dilation_z]
         If the dilation rate is None, no dilation is applied in convolution.
-    kernel :  None or tf.Tensor, optional
+    kernel : None or tf.Tensor, optional
         Optionally, the weights to be used as the kernel can be provided.
         If None, new kernel weights are created.
     azimuth : float or scalar float tf.Tensor
@@ -464,6 +478,8 @@ def conv_hex4d(input_data,
         If True, elements in result tensor which are not part of hexagon or
         IceCube strings (if shape in x and y dimensions is 10x10), will be
         set to zero.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -480,14 +496,17 @@ def conv_hex4d(input_data,
         num_in_channels = input_data.get_shape().as_list()[5]
         if azimuth is not None:
             kernel = rotation.get_dynamic_rotation_hex_kernel(
-                            filter_size+[num_channels, num_filters], azimuth)
+                            filter_size+[num_channels, num_filters], azimuth,
+                            float_precision=float_precision)
         else:
             if num_rotations > 1:
                 kernel = rotation.get_rotated_hex_kernel(
-                    filter_size+[num_in_channels, num_filters], num_rotations)
+                    filter_size+[num_in_channels, num_filters], num_rotations,
+                    float_precision=float_precision)
             else:
                 kernel = get_hex_kernel(
-                    filter_size+[num_in_channels, num_filters])
+                    filter_size+[num_in_channels, num_filters],
+                    float_precision=float_precision)
 
     # convolve with tf conv4d_stacked
     result = conv4d_stacked(input=input_data,
@@ -504,7 +523,8 @@ def conv_hex4d(input_data,
                                  result.get_shape().as_list()[3],
                                  result.get_shape().as_list()[4],
                                  num_filters*num_rotations],
-                                get_ones=True)
+                                get_ones=True,
+                                float_precision=float_precision)
 
         if result.get_shape()[1:] == zero_out_matrix.get_shape():
             result = result*zero_out_matrix
@@ -523,6 +543,7 @@ def create_conv_hex_layers_weights(num_input_channels,
                                    num_filters_list,
                                    num_rotations_list=1,
                                    azimuth_list=None,
+                                   float_precision=FLOAT_PRECISION,
                                    ):
     '''Create weights and biases for conv hex n-dimensional layers with n >= 2
 
@@ -578,6 +599,8 @@ def create_conv_hex_layers_weights(num_input_channels,
         If only a single azimuth angle is given, the same rotation is used for
         all layers.
         If azimuth is None, the hexagonal kernel is not rotated.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -602,20 +625,23 @@ def create_conv_hex_layers_weights(num_input_channels,
                                         azimuth_list,
                                         ):
         if azimuth is not None:
-            kernel = rotation.get_dynamic_rotation_hex_kernel(filter_size,
-                                                              azimuth)
+            kernel = rotation.get_dynamic_rotation_hex_kernel(
+                filter_size, azimuth, float_precision=float_precision)
         else:
             if num_rotations > 1:
                 kernel = rotation.get_rotated_hex_kernel(
                                         filter_size +
                                         [num_input_channels, num_filters],
-                                        num_rotations)
+                                        num_rotations,
+                                        float_precision=float_precision)
             else:
                 kernel = get_hex_kernel(filter_size+[num_input_channels,
-                                                     num_filters])
+                                                     num_filters],
+                                        float_precision=float_precision)
 
         weights_list.append(kernel)
-        biases_list.append(new_biases(length=num_filters*num_rotations))
+        biases_list.append(new_biases(length=num_filters*num_rotations,
+                                      float_precision=float_precision))
         num_input_channels = num_filters
 
     return weights_list, biases_list

@@ -16,9 +16,6 @@ import matplotlib.pyplot as plt
 # tfscripts specific imports
 from tfscripts.hex.rotation import get_rotated_corner_weights
 
-# constants
-from tfscripts import FLOAT_PRECISION
-
 
 def print_hex_data(hex_data):
     """Print hexagonal kernel data to console

@@ -18,6 +18,9 @@ import tensorflow as tf
 # tfscripts specific imports
 from tfscripts.weights import new_weights
 
+# constants
+from tfscripts import FLOAT_PRECISION
+
 
 def conv_output_length(input_length, filter_size, padding, stride, dilation=1):
     """Determines output length of a convolution given input length.
@@ -228,7 +231,8 @@ def locally_connected_2d(input,
                          kernel=None,
                          strides=[1, 1],
                          padding='SAME',
-                         dilation_rate=None):
+                         dilation_rate=None,
+                         float_precision=FLOAT_PRECISION):
     '''
     Like conv2d, but doesn't share weights.
     (not tested/validated yet!!)
@@ -254,6 +258,8 @@ def locally_connected_2d(input,
     dilation_rate : None or list of int of length 2
         [dilattion in x, dilation in y]
         defines dilattion rate to be used
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -300,8 +306,10 @@ def locally_connected_2d(input,
     # fast shortcut
     if list(filter_size) == [1, 1]:
         if kernel is None:
-            kernel = new_weights(shape=input_shape[1:] + [num_outputs])
-        output = tf.reduce_sum(input_tensor=tf.expand_dims(input, axis=4) * kernel, axis=3)
+            kernel = new_weights(shape=input_shape[1:] + [num_outputs],
+                                 float_precision=float_precision)
+        output = tf.reduce_sum(
+            input_tensor=tf.expand_dims(input, axis=4) * kernel, axis=3)
         return output, kernel
 
     # ------------------
@@ -384,7 +392,8 @@ def locally_connected_2d(input,
     # get kernel
     # ------------------
     if kernel is None:
-        kernel = new_weights(shape=kernel_shape)
+        kernel = new_weights(shape=kernel_shape,
+                             float_precision=float_precision)
 
     # ------------------
     # perform convolution
@@ -401,7 +410,8 @@ def locally_connected_3d(input,
                          kernel=None,
                          strides=[1, 1, 1],
                          padding='SAME',
-                         dilation_rate=None):
+                         dilation_rate=None,
+                         float_precision=FLOAT_PRECISION):
     '''
     Like conv3d, but doesn't share weights.
 
@@ -426,6 +436,8 @@ def locally_connected_3d(input,
     dilation_rate : None or list of int of length 3
         [dilattion in x, dilation in y, dilation in z]
         defines dilattion rate to be used
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -471,8 +483,10 @@ def locally_connected_3d(input,
     # fast shortcut
     if list(filter_size) == [1, 1, 1]:
         if kernel is None:
-            kernel = new_weights(shape=input_shape[1:] + [num_outputs])
-        output = tf.reduce_sum(input_tensor=tf.expand_dims(input, axis=5) * kernel, axis=4)
+            kernel = new_weights(shape=input_shape[1:] + [num_outputs],
+                                 float_precision=float_precision)
+        output = tf.reduce_sum(
+            input_tensor=tf.expand_dims(input, axis=5) * kernel, axis=4)
         return output, kernel
 
     # ------------------
@@ -574,7 +588,8 @@ def locally_connected_3d(input,
     # get kernel
     # ------------------
     if kernel is None:
-        kernel = new_weights(shape=kernel_shape)
+        kernel = new_weights(shape=kernel_shape,
+                             float_precision=float_precision)
 
     # ------------------
     # perform convolution
@@ -763,9 +778,10 @@ def local_translational3d_trafo(input,
 
                 if weights is not None:
                     expanded_input = tf.expand_dims(input_patch, -1)
-                    output_patch = tf.reduce_sum(input_tensor=expanded_input * weights,
-                                                 axis=[1, 2, 3, 4],
-                                                 keepdims=False)
+                    output_patch = tf.reduce_sum(
+                        input_tensor=expanded_input * weights,
+                        axis=[1, 2, 3, 4],
+                        keepdims=False)
                 elif fcn is not None:
                     output_patch = fcn(input_patch)
 
@@ -781,8 +797,8 @@ def local_translational3d_trafo(input,
 
 
 def dynamic_conv(
-                input,
-                filter,
+                inputs,
+                filters,
                 batch_size=None,
                 strides=[1, 1, 1],
                 padding='SAME',
@@ -795,7 +811,7 @@ def dynamic_conv(
 
     Parameters
     ----------
-    input : A Tensor. Must be one of the following types:
+    inputs : A Tensor. Must be one of the following types:
             float32, float64, int64, int32, uint8, uint16, int16,
             int8, complex64, complex128, qint8, quint8, qint32, half.
 
@@ -804,8 +820,8 @@ def dynamic_conv(
             3d case:
             Shape [batch, in_depth, in_height, in_width, in_channels].
 
-    filter : A Tensor. Must have the same type as input.
-            in_channels must match between input and filter.
+    filters : A Tensor. Must have the same type as inputs.
+            in_channels must match between inputs and filters.
             2d case:
             Shape [batch, filter_x, filter_y, in_ch, out_ch].
             3d case:
@@ -817,7 +833,7 @@ def dynamic_conv(
     strides : A list of ints that has length >= 2.
         1-D tensor of length 2 (2D) or 3(3D).
         The stride of the sliding window for each spatial
-        dimension of input.
+        dimension of inputs.
 
     padding : A string from: "SAME", "VALID".
         The type of padding algorithm to use.
@@ -835,27 +851,27 @@ def dynamic_conv(
 
     Returns
     -------
-    A Tensor. Has the same type as input.
+    A Tensor. Has the same type as inputs.
     '''
 
-    input_shape = input.get_shape().as_list()
-    filter_shape = filter.get_shape().as_list()
+    input_shape = inputs.get_shape().as_list()
+    filter_shape = filters.get_shape().as_list()
 
     assert len(filter_shape) == len(input_shape) + 1
     assert filter_shape[0] == input_shape[0]
 
     if batch_size is None:
-        batch_size = tf.shape(input=input)[0]
+        batch_size = tf.shape(input=inputs)[0]
 
         try:
             batch_size = dynamic_conv.BATCH_SIZE
         except Exception as e:
-            batch_size = input.get_shape().as_list()[0]
+            batch_size = inputs.get_shape().as_list()[0]
 
-    split_inputs = tf.split(input,
+    split_inputs = tf.split(inputs,
                             batch_size,
                             axis=0)
-    split_filters = tf.unstack(filter,
+    split_filters = tf.unstack(filters,
                                batch_size,
                                axis=0)
 
@@ -1132,9 +1148,9 @@ def trans3d_op(input,
                                 - padding_s[0])
             sliced_filter = tf.slice(filter, begin, size)
             output_patch = tf.reduce_sum(
-                                    input_tensor=expanded_input_patches * sliced_filter,
-                                    axis=[3, 4, 5, 6],
-                                    keepdims=False)
+                        input_tensor=expanded_input_patches * sliced_filter,
+                        axis=[3, 4, 5, 6],
+                        keepdims=False)
             output.append(output_patch)
         # ------------------------------
         # Locally connected
@@ -1469,7 +1485,7 @@ def conv4d_stacked(input, filter,
                                          strides[stack_axis+1:5]),
                                 padding=padding,
                                 dilations=(dilation_rate[:stack_axis-1] +
-                                               dilation_rate[stack_axis:]))
+                                           dilation_rate[stack_axis:]))
                 else:
                     result_patch = tf.nn.conv3d(
                                             input=input_patch,

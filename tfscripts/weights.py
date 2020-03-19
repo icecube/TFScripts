@@ -13,7 +13,8 @@ import tensorflow as tf
 from tfscripts import FLOAT_PRECISION
 
 
-def new_weights(shape, stddev=1.0, name="weights"):
+def new_weights(shape, stddev=1.0, name="weights",
+                float_precision=FLOAT_PRECISION):
     """Helper-function to create new weights
 
     Parameters
@@ -25,20 +26,22 @@ def new_weights(shape, stddev=1.0, name="weights"):
         std. deviation.
     name : str, optional
         The name of the tensor.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
     tf.Tensor
         A tensor with the weights.
     """
-    return tf.Variable(tf.random.truncated_normal(shape,
-                                           stddev=stddev,
-                                           dtype=FLOAT_PRECISION),
+    return tf.Variable(tf.random.truncated_normal(
+                            shape, stddev=stddev, dtype=float_precision),
                        name=name,
-                       dtype=FLOAT_PRECISION)
+                       dtype=float_precision)
 
 
-def new_kernel_weights(shape, stddev=0.01, name="weights"):
+def new_kernel_weights(shape, stddev=0.01, name="weights",
+                       float_precision=FLOAT_PRECISION):
     '''
     Get weights for a convolutional kernel. The weights will be initialised,
     so that convolution performs matrix multiplication over a single pixel.
@@ -54,6 +57,8 @@ def new_kernel_weights(shape, stddev=0.01, name="weights"):
         Noise is sampled from a gaussian with this std. deviation.
     name : str, optional
         The name of the tensor.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -76,18 +81,24 @@ def new_kernel_weights(shape, stddev=0.01, name="weights"):
                                               scale=stddev)
 
     return tf.Variable(weight_initialisation,
-                       name=name, dtype=FLOAT_PRECISION)
+                       name=name, dtype=float_precision)
 
 
-def new_biases(length, stddev=1.0, name='biases'):
+def new_biases(length, stddev=1.0, name='biases',
+               float_precision=FLOAT_PRECISION):
     """Get new biases.
 
     Parameters
     ----------
     length : int
         Number of biases to get.
+    stddev : float, optional
+        The initial values are sampled from a truncated gaussian with this
+        std. deviation.
     name : str, optional
         The name of the tensor.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -95,19 +106,20 @@ def new_biases(length, stddev=1.0, name='biases'):
         A tensor with the biases.
     """
     return tf.Variable(tf.random.truncated_normal(shape=[length],
-                                           stddev=stddev,
-                                           dtype=FLOAT_PRECISION),
-                       name=name, dtype=FLOAT_PRECISION)
+                                                  stddev=stddev,
+                                                  dtype=float_precision),
+                       name=name, dtype=float_precision)
     # return tf.Variable(tf.random_normal(shape=[length],
     #                                     stddev=2.0/length,
-    #                                     dtype=FLOAT_PRECISION),
-    #                    name=name, dtype=FLOAT_PRECISION)
+    #                                     dtype=float_precision),
+    #                    name=name, dtype=float_precision)
 
 
 def create_conv_nd_layers_weights(num_input_channels,
                                   filter_size_list,
                                   num_filters_list,
-                                  name='conv_{}d'):
+                                  name='conv_{}d',
+                                  float_precision=FLOAT_PRECISION):
     '''Create weights and biases for conv 3d layers
 
     Parameters
@@ -131,6 +143,8 @@ def create_conv_nd_layers_weights(num_input_channels,
         that layer.
     name : str, optional
         Name of weights and biases.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -155,8 +169,10 @@ def create_conv_nd_layers_weights(num_input_channels,
         bias_name = 'biases_{}_{:03d}'.format(name, i)
 
         # weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
-        weights_list.append(new_weights(shape=shape, name=weight_name))
-        biases_list.append(new_biases(length=num_filters, name=bias_name))
+        weights_list.append(new_weights(shape=shape, name=weight_name,
+                                        float_precision=float_precision))
+        biases_list.append(new_biases(length=num_filters, name=bias_name,
+                                      float_precision=float_precision))
 
         # update number of input channels for next layer
         num_input_channels = num_filters
@@ -167,7 +183,8 @@ def create_conv_nd_layers_weights(num_input_channels,
 def create_fc_layers_weights(num_inputs,
                              fc_sizes,
                              max_out_size_list=None,
-                             name='fc'):
+                             name='fc',
+                             float_precision=FLOAT_PRECISION):
     '''
     Create weights and biases for
     fully connected layers
@@ -183,6 +200,8 @@ def create_fc_layers_weights(num_inputs,
         each layer.
     name : str, optional
         Name of weights and biases.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -202,8 +221,10 @@ def create_fc_layers_weights(num_inputs,
         bias_name = 'biases_{}_{:03d}'.format(name, i)
 
         weights_list.append(new_weights(shape=[num_inputs, num_outputs],
-                                        name=weight_name))
-        biases_list.append(new_biases(length=num_outputs, name=bias_name))
+                                        name=weight_name,
+                                        float_precision=float_precision))
+        biases_list.append(new_biases(length=num_outputs, name=bias_name,
+                                      float_precision=float_precision))
 
         if max_out_size is None:
             num_inputs = num_outputs

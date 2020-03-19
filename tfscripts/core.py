@@ -46,10 +46,7 @@ def add_residual(input, residual, strides=None, use_scale_factor=True,
     '''
 
     # ----------------------
-    # strides for mismatching
-    # dimensions other than channel
-    # dimension
-    # (Post Masterthesis)
+    # strides for mismatching dimensions other than channel dimension
     # ----------------------
     if strides is not None:
 
@@ -162,7 +159,7 @@ def activation(layer, activation_type,
     # https://github.com/ibmua/learning-to-make-nn-in-python/
     #    blob/master/nn_classifier.py
     elif activation_type == 'requ':
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          tf.zeros_like(layer, dtype=FLOAT_PRECISION),
                          tf.square(layer))
 
@@ -171,10 +168,10 @@ def activation(layer, activation_type,
         alpha = 1.6733
         # from https://arxiv.org/abs/1706.02515
         #   self normalizing networks
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          tf.exp(layer) * tf.constant(alpha,
                                                      dtype=FLOAT_PRECISION)
-                         - tf.constant(alpha,dtype=FLOAT_PRECISION),
+                         - tf.constant(alpha, dtype=FLOAT_PRECISION),
                          layer)
         layer = layer * tf.constant(lam, dtype=FLOAT_PRECISION)
 
@@ -185,22 +182,22 @@ def activation(layer, activation_type,
         layer = -tf.nn.relu(layer)
 
     elif activation_type == 'invrelu':
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0,
+        layer = tf.where(tf.less(layer, tf.constant(0,
                          dtype=FLOAT_PRECISION)), layer, (layer+1e-8)**-1)
 
     elif activation_type == 'sign':
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          layer, tf.sign(layer))
 
     elif activation_type == 'prelu':
         slope = new_weights(layer.get_shape().as_list()[1:]) + 1.0
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          layer*slope, layer)
 
     elif activation_type == 'pelu':
         a = new_weights(layer.get_shape().as_list()[1:]) + 1.0
         b = new_weights(layer.get_shape().as_list()[1:]) + 1.0
-        layer = tf.compat.v1.where(tf.less(layer,
+        layer = tf.where(tf.less(layer,
                          tf.constant(0, dtype=FLOAT_PRECISION)),
                          (tf.exp(layer/b) - 1)*a, layer*(a/b))
 
@@ -257,7 +254,7 @@ def batch_norm_wrapper(inputs, is_training, decay=0.99, epsilon=1e-6):
     norm_shape = inputs.get_shape().as_list()[1:]
     scale = tf.Variable(tf.ones(norm_shape, dtype=FLOAT_PRECISION),
                         name='BN_scale', dtype=FLOAT_PRECISION)
-    beta = tf.Variable(tf.zeros(norm_shape,dtype=FLOAT_PRECISION),
+    beta = tf.Variable(tf.zeros(norm_shape, dtype=FLOAT_PRECISION),
                        name='BN_beta', dtype=FLOAT_PRECISION)
     pop_mean = tf.Variable(tf.zeros(norm_shape, dtype=FLOAT_PRECISION),
                            trainable=False,
@@ -269,11 +266,13 @@ def batch_norm_wrapper(inputs, is_training, decay=0.99, epsilon=1e-6):
                           dtype=FLOAT_PRECISION)
 
     if is_training:
-        batch_mean, batch_var = tf.nn.moments(x=inputs, axes=[0], keepdims=False)
-        train_mean = tf.compat.v1.assign(pop_mean,
-                               pop_mean * decay + batch_mean * (1 - decay))
-        train_var = tf.compat.v1.assign(pop_var,
-                              pop_var * decay + batch_var * (1 - decay))
+        batch_mean, batch_var = tf.nn.moments(x=inputs,
+                                              axes=[0],
+                                              keepdims=False)
+        train_mean = tf.compat.v1.assign(
+                        pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+        train_var = tf.compat.v1.assign(
+                        pop_var, pop_var * decay + batch_var * (1 - decay))
         with tf.control_dependencies([train_mean, train_var]):
             return tf.nn.batch_normalization(
                 inputs,
@@ -283,3 +282,65 @@ def batch_norm_wrapper(inputs, is_training, decay=0.99, epsilon=1e-6):
     else:
         return tf.nn.batch_normalization(inputs, pop_mean, pop_var, beta,
                                          scale, epsilon)
+
+
+def maxout(inputs, num_units, axis=-1):
+    """Applies Maxout to the input.
+
+    "Maxout Networks" Ian J. Goodfellow, David Warde-Farley, Mehdi Mirza, Aaron
+    Courville, Yoshua Bengio. https://arxiv.org/abs/1302.4389
+    Usually the operation is performed in the filter/channel dimension. This
+    can also be used after Dense layers to reduce number of features.
+
+    Adopted from:
+        https://github.com/tensorflow/addons/blob/v0.7.1/tensorflow_addons/
+        layers/maxout.py
+
+    Parameters
+    ----------
+    inputs : nD tensor
+        The input data tensor on which to apply the the maxout operation.
+        shape: (batch_size, ..., axis_dim, ...)
+    num_units
+        Specifies how many features will remain after maxout
+        in the axis dimension (usually channel).
+        This must be a factor of number of features.
+    axis
+        The dimension where max pooling will be performed. Default is the
+        last dimension.
+
+    Returns
+    -------
+    nD tensor
+        The output tensor after applying maxout operation.
+        shape: (batch_size, ..., num_units, ...)
+    """
+    inputs = tf.convert_to_tensor(inputs)
+    shape = inputs.get_shape().as_list()
+
+    # Dealing with batches with arbitrary sizes
+    for i in range(len(shape)):
+        if shape[i] is None:
+            shape[i] = tf.shape(inputs)[i]
+
+    num_channels = shape[axis]
+    if (not isinstance(num_channels, tf.Tensor)
+            and num_channels % num_units):
+        raise ValueError('number of features({}) is not '
+                         'a multiple of num_units({})'.format(
+                             num_channels, num_units))
+
+    if axis < 0:
+        axis = axis + len(shape)
+    else:
+        axis = axis
+    assert axis >= 0, 'Find invalid axis: {}'.format(axis)
+
+    expand_shape = shape[:]
+    expand_shape[axis] = num_units
+    k = num_channels // num_units
+    expand_shape.insert(axis, k)
+
+    outputs = tf.math.reduce_max(
+        tf.reshape(inputs, expand_shape), axis, keepdims=False)
+    return outputs

@@ -445,8 +445,8 @@ def new_conv_nd_layer(input,
 
         if num_dims == 2 or num_dims == 3:
             layer = conv.dynamic_conv(
-                              input=input,
-                              filter=weights,
+                              inputs=input,
+                              filters=weights,
                               strides=strides[1:-1],
                               padding=padding,
                               dilation_rate=dilation_rate
@@ -506,12 +506,12 @@ def new_conv_nd_layer(input,
 
     # Use pooling to down-sample the image resolution?
     if num_dims == 2:
-        layer = pooling.pool(layer=layer,
-                             ksize=pooling_ksize,
-                             strides=pooling_strides,
-                             padding=pooling_padding,
-                             pooling_type=pooling_type,
-                             )
+        layer = pooling.pool2d(layer=layer,
+                               ksize=pooling_ksize,
+                               strides=pooling_strides,
+                               padding=pooling_padding,
+                               pooling_type=pooling_type,
+                               )
     elif num_dims == 3:
         layer = pooling.pool3d(layer=layer,
                                ksize=pooling_ksize,
@@ -589,6 +589,7 @@ def new_fc_layer(input,
         If None, new biases are created.
     max_out_size : None or int, optional
         The max_out_size for the layer.
+        This must be a factor of number of channels.
         If None, no max_out is used in the layer.
 
     Returns
@@ -624,11 +625,7 @@ def new_fc_layer(input,
             "max out needs to match dim"
         layer_shape[-1] = layer_shape[-1] // max_out_size
 
-        layer = tf.contrib.layers.maxout(
-                                        inputs=layer,
-                                        num_units=max_out_size,
-                                        axis=-1,
-                                      )
+        layer = core.maxout(inputs=layer, num_units=max_out_size, axis=-1)
         channel_stride = max(1, num_inputs // layer_shape[-1])
         res_strides = [1 for i in input.get_shape()[:-1]] + [channel_stride]
 
@@ -749,11 +746,7 @@ def new_channel_wise_fc_layer(input,
         layer = tf.transpose(a=layer, perm=[0, 2, 1])
 
     if max_out_size is not None:
-        layer = tf.contrib.layers.maxout(
-                                        inputs=layer,
-                                        num_units=max_out_size,
-                                        axis=-1,
-                                      )
+        layer = core.maxout(inputs=layer, num_units=max_out_size, axis=-1)
 
     if use_dropout:
         layer = tf.nn.dropout(layer, 1 - (keep_prob))
