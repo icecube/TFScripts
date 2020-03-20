@@ -159,10 +159,13 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
     -------
     tf.Tensor
         The icecube kernel with the desired shape.
+    list of tf.Variable
+        A list of tensorflow variables created in this function
     '''
     zeros = tf.zeros(shape, dtype=float_precision)
     ones = tf.ones(shape, dtype=float_precision)
 
+    var_list = []
     a_list = []
     for a in xrange(-4, 6):
 
@@ -176,6 +179,7 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
                 else:
                     weights = new_weights(shape,
                                           float_precision=float_precision)
+                    var_list.append(weights)
             else:
                 # virtual string, string does not actually exist
                 weights = zeros
@@ -183,4 +187,4 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
             b_list.append(weights)
     a_list.append(tf.stack(b_list))
     icecube_kernel = tf.stack(a_list)
-    return icecube_kernel
+    return icecube_kernel, var_list

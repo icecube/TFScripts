@@ -57,10 +57,11 @@ class TestConvModule(unittest.TestCase):
               [-1.5634956, -5.2658362, 0.12334719, -4.874626, 4.04391],
               [2.1574607, -0.08705652, -2.270496, -0.37243897, 3.500473]]]]
 
-        result, kernel = conv.locally_connected_2d(input=data,
-                                                   num_outputs=num_outputs,
-                                                   filter_size=filter_size,
-                                                   kernel=kernel)
+        conv_layer = conv.LocallyConnected2d(input_shape=data.get_shape(),
+                                             num_outputs=num_outputs,
+                                             filter_size=filter_size,
+                                             kernel=kernel)
+        result = conv_layer(data)
         self.assertTrue(np.allclose(true_result, result, atol=1e-6))
 
     def test_locally_connected_3d(self):
@@ -110,10 +111,11 @@ class TestConvModule(unittest.TestCase):
                [1.2522638, 8.907527],
                [4.3867416, 1.9319328]]]]]
 
-        result, kernel = conv.locally_connected_3d(input=data,
-                                                   num_outputs=num_outputs,
-                                                   filter_size=filter_size,
-                                                   kernel=kernel)
+        conv_layer = conv.LocallyConnected3d(input_shape=data.get_shape(),
+                                             num_outputs=num_outputs,
+                                             filter_size=filter_size,
+                                             kernel=kernel)
+        result = conv_layer(data)
         self.assertTrue(np.allclose(true_result, result, atol=1e-6))
 
     def test_conv3d_stacked(self):

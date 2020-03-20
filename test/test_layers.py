@@ -14,8 +14,8 @@ class TestConvModule(unittest.TestCase):
     def setUp(self):
         self.random_state = np.random.RandomState(42)
 
-    def test_new_conv_nd_layers(self):
-        """Test new_conv_nd_layers
+    def test_ConvNdLayers(self):
+        """Test ConvNdLayers
         """
         data = tf.constant(self.random_state.normal(size=[3, 4, 4, 4, 2]),
                            dtype=tf.float32)
@@ -40,8 +40,8 @@ class TestConvModule(unittest.TestCase):
         num_filters_list = [3, 7, 1]
         method_list = ['convolution', 'hex_convolution', 'convolution']
 
-        layer, weights, biases = layers.new_conv_nd_layers(
-                                data,
+        conv_nd_layers = layers.ConvNdLayers(
+                                input_shape=data.get_shape(),
                                 filter_size_list=filter_size_list,
                                 num_filters_list=num_filters_list,
                                 pooling_type_list=pooling_type_list,
@@ -51,8 +51,9 @@ class TestConvModule(unittest.TestCase):
                                 method_list=method_list,
                                 weights_list=weights_list,
                                 biases_list=biases_list,
-                                verbose=False,
-                                )
+                                verbose=False)
+
+        layer = conv_nd_layers(data, is_training=False)
 
         result_true = [[[[[1.5821583]]]],
                        [[[[1.8506659]]]],
@@ -60,8 +61,8 @@ class TestConvModule(unittest.TestCase):
 
         self.assertTrue(np.allclose(result_true, layer[-1].numpy()))
 
-    def test_new_fc_layers(self):
-        """Test new_fc_layers
+    def test_FCLayers(self):
+        """Test FCLayers
         """
         data = tf.constant(self.random_state.normal(size=[3, 7]),
                            dtype=tf.float32)
@@ -77,14 +78,16 @@ class TestConvModule(unittest.TestCase):
         activation_list = ['elu', 'relu', '']
         fc_sizes = [3, 7, 1]
 
-        layer, weights, biases = layers.new_fc_layers(
-                                data,
+        fc_layers = layers.FCLayers(
+                                input_shape=data.get_shape(),
                                 fc_sizes=fc_sizes,
                                 activation_list=activation_list,
                                 weights_list=weights_list,
                                 biases_list=biases_list,
                                 verbose=False,
                                 )
+        layer = fc_layers(data, is_training=False)
+
         result_true = [[0.06657974],
                        [-0.3617597],
                        [0.00241985]]
