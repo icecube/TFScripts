@@ -752,11 +752,11 @@ def local_translational3d_trafo(input,
     input_shape = input.get_shape().as_list()
 
     # sanity checks
-    assert len(filter_size) == 3, \
-        'Filter size must be of shape [x,y,z], but is {!r}'.format(filter_size)
+    msg = 'Filter size must be of shape [x,y,z], but is {!r}'
+    assert len(filter_size) == 3, msg.format(filter_size)
     assert np.prod(filter_size) > 0, 'Filter sizes must be greater than 0'
-    assert len(input_shape) == 5, \
-        'Shape is expected to be of length 5, but is {!r}'.format(input_shape)
+    msg = 'Shape is expected to be of length 5, but is {!r}'
+    assert len(input_shape) == 5, msg.format(input_shape)
 
     # calculate output shape
     output_shape = np.empty(5, dtype=int)
@@ -1087,11 +1087,11 @@ def trans3d_op(input,
     if method not in ['dynamic_convolution', 'locally_connected',
                       'local_trafo']:
         raise ValueError('Method unknown: {!r}'.format(method))
-    assert len(filter_size) == 3, \
-        'Filter size must be of shape [x,y,z], but is {!r}'.format(filter_size)
+    msg = 'Filter size must be of shape [x,y,z], but is {!r}'
+    assert len(filter_size) == 3, msg.format(filter_size)
     assert np.prod(filter_size) > 0, 'Filter sizes must be greater than 0'
-    assert len(input_shape) == 5, \
-        'Shape is expected to be of length 5, but is {}'.format(input_shape)
+    msg = 'Shape is expected to be of length 5, but is {}'
+    assert len(input_shape) == 5, msg.format(input_shape)
 
     # calculate output shape
     output_shape = np.empty(5, dtype=int)

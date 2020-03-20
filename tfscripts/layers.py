@@ -898,8 +898,8 @@ class ChannelWiseFCLayer(tf.Module):
             input_shape = input_shape.as_list()
 
         # input: [batch, num_inputs, num_channel]
-        assert len(input_shape) == 3, \
-            '{} != [batch, num_inputs, num_channel]'.format(input_shape)
+        msg = '{} != [batch, num_inputs, num_channel]'
+        assert len(input_shape) == 3, msg.format(input_shape)
 
         num_inputs = input_shape[1]
         num_channels = input_shape[2]

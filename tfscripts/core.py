@@ -88,8 +88,8 @@ class AddResidual(tf.Module):
         # ----------------------
         if self.strides is not None:
 
-            assert len(self.strides) == len(input.get_shape().as_list()), \
-                'Number of dimensions of strides and input must match'
+            msg = 'Number of dimensions of strides and input must match'
+            assert len(self.strides) == len(input.get_shape().as_list()), msg
             assert self.strides[0] == 1, 'stride in batch dimension must be 1'
 
             if not self.strides == [1 for s in self.strides]:

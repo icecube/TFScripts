@@ -55,10 +55,9 @@ def get_angle(vec1, vec2, dtype=FLOAT_PRECISION):
         Description
     """
 
-    assert vec1.get_shape().as_list()[-1] == 3, \
-        "Expect shape [?,3] or [3], but got {!r}".format(vec1.get_shape())
-    assert vec2.get_shape().as_list()[-1] == 3, \
-        "Expect shape [?,3] or [3], but got {!r}".format(vec2.get_shape())
+    msg = 'Expect shape [?,3] or [3], but got {!r}'
+    assert vec1.get_shape().as_list()[-1] == 3, msg.format(vec1.get_shape())
+    assert vec2.get_shape().as_list()[-1] == 3, msg.format(vec2.get_shape())
 
     norm1 = tf.norm(tensor=vec1, axis=-1, keepdims=True)
     norm2 = tf.norm(tensor=vec2, axis=-1, keepdims=True)
