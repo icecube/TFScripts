@@ -725,6 +725,8 @@ class FCLayer(tf.Module):
         if isinstance(input_shape, tf.TensorShape):
             input_shape = input_shape.as_list()
 
+        num_inputs = input_shape[-1]
+
         # Create new weights and biases.
         if weights is None:
             weights = new_weights(shape=[num_inputs, num_outputs])
