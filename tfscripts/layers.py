@@ -498,9 +498,14 @@ class ConvNdLayer(tf.Module):
         self.biases = biases
         self.weights = weights
 
+        # get shape of activation input
+        # todo: figure out better way to obtain this
+        dummy_data = tf.ones([1] + input_shape[1:])
+        conv_layer_output = self.conv_layer(dummy_data)
+
         self.activation = core.Activation(
                             activation_type=activation,
-                            input_shape=input_shape,
+                            input_shape=conv_layer_output.shape,
                             use_batch_normalisation=use_batch_normalisation,
                             float_precision=float_precision)
 
@@ -519,10 +524,9 @@ class ConvNdLayer(tf.Module):
 
         # get shape of output
         # todo: figure out better way to obtain this
-        dummy_data = tf.ones([1] + input_shape[1:])
-        output = self.activation(self.conv_layer(dummy_data))
+        output = self.activation(conv_layer_output, is_training=False)
         output = self._apply_pooling(output)
-        self.output_shape = output.get_shape().as_list()
+        self.output_shape = output.shape.as_list()
 
         # Use as Residual
         if use_residual:
@@ -738,7 +742,7 @@ class FCLayer(tf.Module):
 
         self.activation = core.Activation(
                             activation_type=activation,
-                            input_shape=input_shape,
+                            input_shape=[None, num_outputs],
                             use_batch_normalisation=use_batch_normalisation,
                             float_precision=float_precision)
 
