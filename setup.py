@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 here = os.path.dirname(__file__)
 
@@ -11,7 +11,7 @@ with open(os.path.join(here, 'tfscripts', '__about__.py')) as fobj:
 setup(
     name='tfscripts',
     version=about['__version__'],
-    packages=['tfscripts'],
+    packages=find_packages(),
     install_requires=[
         'numpy', 'matplotlib',
     ],
