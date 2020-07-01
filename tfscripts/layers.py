@@ -9,6 +9,7 @@ import tensorflow as tf
 
 # tfscripts specific imports
 from tfscripts.weights import new_weights, new_biases, new_kernel_weights
+from tfscripts.weights import new_locally_connected_weights
 from tfscripts import conv
 from tfscripts import core
 from tfscripts import pooling
@@ -437,8 +438,10 @@ class ConvNdLayer(tf.Module):
 
             # Create new biases, one for each filter and position
             if biases is None:
-                biases = new_weights(shape=self.conv_layer.output_shape[1:],
-                                     float_precision=float_precision)
+                biases = new_locally_connected_weights(
+                    shape=self.conv_layer.output_shape[1:],
+                    shared_axes=[i for i in range(num_dims)],
+                    float_precision=float_precision)
 
         # -------------------
         # local trafo
@@ -536,7 +539,7 @@ class ConvNdLayer(tf.Module):
                                     float_precision=float_precision)
 
     def __call__(self, inputs, is_training, keep_prob=None):
-        """Apply 2d Locally Connected Module.
+        """Apply Module.
 
         Parameters
         ----------
@@ -781,7 +784,7 @@ class FCLayer(tf.Module):
         self.float_precision = float_precision
 
     def __call__(self, inputs, is_training, keep_prob):
-        """Apply 2d Locally Connected Module.
+        """Apply Module.
 
         Parameters
         ----------
@@ -963,7 +966,7 @@ class ChannelWiseFCLayer(tf.Module):
         self.float_precision = float_precision
 
     def __call__(self, inputs, is_training, keep_prob):
-        """Apply 2d Locally Connected Module.
+        """Apply Module.
 
         Parameters
         ----------

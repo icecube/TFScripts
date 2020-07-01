@@ -40,6 +40,53 @@ def new_weights(shape, stddev=1.0, name="weights",
                        dtype=float_precision)
 
 
+def new_locally_connected_weights(shape, stddev=1.0, name="weights",
+                                  shared_axes=None,
+                                  float_precision=FLOAT_PRECISION):
+    """Helper-function to create new weights
+
+    Parameters
+    ----------
+    shape : list of int
+        The desired shape.
+    stddev : float, optional
+        The initial values are sampled from a truncated gaussian with this
+        std. deviation.
+    name : str, optional
+        The name of the tensor.
+    shared_axes : list of int, optional
+        A list of axes over which the same initial values will be chosen.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
+
+    Returns
+    -------
+    tf.Tensor
+        A tensor with the weights.
+    """
+    if shared_axes is None:
+        shared_axes = []
+
+    shape_init = []
+    multiples = []
+    for index, dim in enumerate(shape):
+        if index in shared_axes:
+            shape_init.append(1)
+            multiples.append(dim)
+        else:
+            shape_init.append(dim)
+            multiples.append(1)
+
+    # sample initial values
+    initial_value = tf.random.truncated_normal(
+        shape_init, stddev=stddev, dtype=float_precision)
+
+    # tile over shared axes
+    initial_value = tf.tile(initial_value, multiples=multiples)
+
+    return tf.Variable(initial_value, name=name, dtype=float_precision)
+
+
 def new_kernel_weights(shape, stddev=0.01, name="weights",
                        float_precision=FLOAT_PRECISION):
     '''

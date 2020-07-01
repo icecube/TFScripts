@@ -16,7 +16,7 @@ import numpy as np
 import tensorflow as tf
 
 # tfscripts specific imports
-from tfscripts.weights import new_weights
+from tfscripts.weights import new_weights, new_locally_connected_weights
 
 # constants
 from tfscripts import FLOAT_PRECISION
@@ -318,12 +318,16 @@ class LocallyConnected2d(tf.Module):
         # fast shortcut
         if kernel is None:
             if list(filter_size) == [1, 1]:
-                kernel = new_weights(shape=input_shape[1:] + [num_outputs],
-                                     float_precision=float_precision)
+                kernel = new_locally_connected_weights(
+                    shape=input_shape[1:] + [num_outputs],
+                    shared_axes=[0, 1],
+                    float_precision=float_precision)
 
             else:
-                kernel = new_weights(shape=kernel_shape,
-                                     float_precision=float_precision)
+                kernel = new_locally_connected_weights(
+                    shape=kernel_shape,
+                    shared_axes=[0],
+                    float_precision=float_precision)
 
         self.output_shape = output_shape
         self.num_outputs = num_outputs
@@ -534,12 +538,16 @@ class LocallyConnected3d(tf.Module):
         # fast shortcut
         if kernel is None:
             if list(filter_size) == [1, 1, 1]:
-                kernel = new_weights(shape=input_shape[1:] + [num_outputs],
-                                     float_precision=float_precision)
+                kernel = new_locally_connected_weights(
+                    shape=input_shape[1:] + [num_outputs],
+                    shared_axes=[0, 1, 2],
+                    float_precision=float_precision)
 
             else:
-                kernel = new_weights(shape=kernel_shape,
-                                     float_precision=float_precision)
+                kernel = new_locally_connected_weights(
+                    shape=kernel_shape,
+                    shared_axes=[0],
+                    float_precision=float_precision)
 
         self.output_shape = output_shape
         self.num_outputs = num_outputs
