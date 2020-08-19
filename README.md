@@ -1,6 +1,6 @@
 | Testing | Coverage |
 | :-----: | :------: |
-| [![Build Status](https://travis-ci.org/mhuen/tfscripts.svg?branch=master)](https://travis-ci.org/mhuen/tfscripts) | [![Coverage Status](https://codecov.io/gh/mhuen/tfscripts/branch/master/graph/badge.svg)](https://codecov.io/gh/mhuen/tfscripts/branch/master)
+| [![Build Status](https://travis-ci.org/icecubeopensource/tfscripts.svg?branch=master)](https://travis-ci.org/icecubeopensource/tfscripts) | [![Coverage Status](https://codecov.io/gh/icecubeopensource/tfscripts/branch/master/graph/badge.svg)](https://codecov.io/gh/icecubeopensource/tfscripts/branch/master)
 
 
 # TFScripts
