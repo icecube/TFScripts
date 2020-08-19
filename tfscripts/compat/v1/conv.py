@@ -866,8 +866,8 @@ def dynamic_conv(
     output_list = []
     for split_input, split_filter in zip(split_inputs, split_filters):
         output_list.append(
-              tf.nn.convolution(input=split_input,
-                                filters=split_filter,
+              tf.nn.convolution(split_input,
+                                split_filter,
                                 strides=strides,
                                 padding=padding,
                                 dilations=dilation_rate,
@@ -1398,8 +1398,8 @@ def conv4d_stacked(input, filter,
                         if dilation_rate is not None:
                             tensors_t_convoluted.append(
                                 tf.nn.convolution(
-                                    input=tensors_t[index_t_i],
-                                    filters=kernel_t[j],
+                                    tensors_t[index_t_i],
+                                    kernel_t[j],
                                     strides=(strides[1:stack_axis+1]
                                              + strides[stack_axis:5]),
                                     padding=padding,
@@ -1440,8 +1440,8 @@ def conv4d_stacked(input, filter,
                         if dilation_rate is not None:
                             tensors_t_convoluted.append(
                                 tf.nn.convolution(
-                                    input=tensors_t[j],
-                                    filters=kernel_t[kernel_j],
+                                    tensors_t[j],
+                                    kernel_t[kernel_j],
                                     strides=(strides[1:stack_axis+1] +
                                              strides[stack_axis:5]),
                                     padding=padding,
@@ -1468,8 +1468,8 @@ def conv4d_stacked(input, filter,
                 input_patch = tf.concat(input_patch, axis=4)
                 if dilation_rate is not None:
                     result_patch = tf.nn.convolution(
-                        input=input_patch,
-                        filters=kernel_patch,
+                        input_patch,
+                        kernel_patch,
                         strides=(strides[1:stack_axis] +
                                  strides[stack_axis+1:5]),
                         padding=padding,

@@ -341,8 +341,8 @@ def conv_hex(input_data,
                             dilation_rate=dilation_rate,
                             )
     else:
-        result = tf.nn.convolution(input=input_data,
-                                   filters=kernel,
+        result = tf.nn.convolution(input_data,
+                                   kernel,
                                    strides=strides[1:-1],
                                    padding=padding,
                                    dilations=dilation_rate)

@@ -341,8 +341,8 @@ def new_conv_nd_layer(input,
     # -------------------
     if method.lower() == 'convolution':
         if num_dims == 2 or num_dims == 3:
-            layer = tf.nn.convolution(input=input,
-                                      filters=weights,
+            layer = tf.nn.convolution(input,
+                                      weights,
                                       strides=strides[1:-1],
                                       padding=padding,
                                       dilations=dilation_rate)
