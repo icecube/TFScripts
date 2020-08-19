@@ -1,5 +1,5 @@
 '''
-tfscripts hexagonal convolution visualization functions
+tfscripts.compat.v1 hexagonal convolution visualization functions
 '''
 
 from __future__ import division, print_function
@@ -13,8 +13,11 @@ except ImportError:
     matplotlib.use("AGG")
 import matplotlib.pyplot as plt
 
-# tfscripts specific imports
-from tfscripts.hex.rotation import get_rotated_corner_weights
+# tfscripts.compat.v1 specific imports
+from tfscripts.compat.v1.hex.rotation import get_rotated_corner_weights
+
+# constants
+from tfscripts.compat.v1 import FLOAT_PRECISION
 
 
 def print_hex_data(hex_data):

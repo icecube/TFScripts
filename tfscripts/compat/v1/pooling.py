@@ -1,13 +1,13 @@
 '''
-Pooling functions for tfscripts
+Pooling functions for tfscripts.compat.v1
 '''
 
 from __future__ import division, print_function
 
 import tensorflow as tf
 
-# tfscripts specific imports
-from tfscripts.conv import get_conv_slice, get_start_index
+# tfscripts.compat.v1 specific imports
+from tfscripts.compat.v1.conv import get_conv_slice, get_start_index
 
 
 def pool3d(layer, ksize, strides, padding, pooling_type):
@@ -73,7 +73,7 @@ def pool3d(layer, ksize, strides, padding, pooling_type):
     return layer
 
 
-def pool2d(layer, ksize, strides, padding, pooling_type):
+def pool(layer, ksize, strides, padding, pooling_type):
     """Convenience function to perform pooling in 2D
 
     Parameters
@@ -111,24 +111,32 @@ def pool2d(layer, ksize, strides, padding, pooling_type):
 
     # Use pooling to down-sample the image resolution?
     if pooling_type == 'max':
-        layer = tf.nn.max_pool2d(input=layer,
-                                 ksize=ksize,
-                                 strides=strides,
-                                 padding=padding)
+        layer = tf.nn.max_pool2d(
+            input=layer,
+            ksize=ksize,
+            strides=strides,
+            padding=padding,
+        )
     elif pooling_type == 'avg':
-        layer = tf.nn.avg_pool2d(input=layer,
-                                 ksize=ksize,
-                                 strides=strides,
-                                 padding=padding)
+        layer = tf.nn.avg_pool2d(
+            input=layer,
+            ksize=ksize,
+            strides=strides,
+            padding=padding,
+        )
     elif pooling_type == 'max_avg':
-        layer_max = tf.nn.max_pool2d(input=layer,
-                                     ksize=ksize,
-                                     strides=strides,
-                                     padding=padding)
-        layer_avg = tf.nn.avg_pool2d(input=layer,
-                                     ksize=ksize,
-                                     strides=strides,
-                                     padding=padding)
+        layer_max = tf.nn.max_pool2d(
+            input=layer,
+            ksize=ksize,
+            strides=strides,
+            padding=padding,
+        )
+        layer_avg = tf.nn.avg_pool2d(
+            input=layer,
+            ksize=ksize,
+            strides=strides,
+            padding=padding,
+        )
         layer = (layer_avg + layer_max) / 2.
     return layer
 
@@ -190,11 +198,11 @@ def pool_over_depth(layer, ksize, stride, padding, pooling_type):
         # ------------------------------------------
         if pooling_type == 'max':
             input_patches.append(tf.reduce_max(
-                                    input_tensor=layer[..., slice_c], axis=-1))
+                input_tensor=layer[..., slice_c], axis=-1))
 
         elif pooling_type == 'avg':
             input_patches.append(tf.reduce_mean(
-                                    input_tensor=layer[..., slice_c], axis=-1))
+                input_tensor=layer[..., slice_c], axis=-1))
 
         else:
             raise ValueError('Pooling_type {!r} is unknown.'.format(
@@ -341,8 +349,7 @@ def avg_pool4d_stacked(input, ksize, strides, padding):
                                             strides=strides[:4]+strides[5:],
                                             padding=padding)
                                             )
-                    avg_tensors_t_s = tf.divide(tf.add_n(tensors_t_averaged),
-                                                len_ts)
+                    avg_tensors_t_s = tf.add_n(tensors_t_averaged) / len_ts
 
                     # put together
                     result_t.append(avg_tensors_t_s)
@@ -361,8 +368,7 @@ def avg_pool4d_stacked(input, ksize, strides, padding):
                                              strides=strides[:4]+strides[5:],
                                              padding=padding)
                                              )
-                avg_tensors_t_s = tf.divide(tf.add_n(tensors_t_averaged),
-                                            len_ts)
+                avg_tensors_t_s = tf.add_n(tensors_t_averaged) / len_ts
 
                 # put together
                 result_t.append(avg_tensors_t_s)

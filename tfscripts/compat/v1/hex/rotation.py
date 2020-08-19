@@ -1,5 +1,5 @@
 '''
-tfscripts hexagonal rotation utility functions
+tfscripts.compat.v1 hexagonal rotation utility functions
     Hex rotation utility functions
     Rotated kernels: static and dynamic
 
@@ -12,11 +12,11 @@ from __future__ import division, print_function
 import numpy as np
 import tensorflow as tf
 
-# tfscripts specific imports
-from tfscripts.weights import new_weights
+# tfscripts.compat.v1 specific imports
+from tfscripts.compat.v1.weights import new_weights
 
 # constants
-from tfscripts import FLOAT_PRECISION
+from tfscripts.compat.v1 import FLOAT_PRECISION
 
 
 def get_rotated_corner_weights(corner_weights, azimuth):
@@ -92,16 +92,15 @@ def tf_get_rotated_corner_weights(corner_weights, azimuth):
     return rotatedcorner_weights
 
 
-def get_dynamic_rotation_hex_kernel(filter_size, azimuth,
-                                    float_precision=FLOAT_PRECISION):
+def get_dynamic_rotation_hex_kernel(filter_size, azimuth):
     '''Dynamically azimuthally rotated hexagonal kernels.
 
     Create Weights for a hexagonal kernel.
     The Kernel is dynamically rotated by the 'azimuth' angle.
     The Kernel will be of a hexagonal shape in the first two dimensions,
     while the other dimensions are normal.
-    The hexagonal kernel is of the shape:
-        [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
+    The hexagonal kernel is off the shape:
+    [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
     But elments with coordinates in the first two dimensions, that don't belong
     to the hexagon are set to a tf.Constant 0.
 
@@ -129,8 +128,6 @@ def get_dynamic_rotation_hex_kernel(filter_size, azimuth,
     azimuth : tf tensor
         A scalar float tf.Tensor denoting the angle by which the kernel will
         be dynamically rotated. Azimuth angle is given in degrees.
-    float_precision : tf.dtype, optional
-        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -147,85 +144,51 @@ def get_dynamic_rotation_hex_kernel(filter_size, azimuth,
         Description
 
     '''
-    var_list = []
     no_of_dims = len(filter_size)
     rotated_filter_size = filter_size[2:-1] + [filter_size[-1]]
 
     Z = tf.zeros([tf.shape(input=azimuth)[0]] + filter_size[2:],
-                 dtype=float_precision)
-    center_weight = new_weights([1] + filter_size[2:],
-                                float_precision=float_precision)
-    var_list.append(center_weight)
+                 dtype=FLOAT_PRECISION)
+    center_weight = new_weights([1] + filter_size[2:])
     multiples = [tf.shape(input=azimuth)[0]] + [1]*(no_of_dims - 2)
     center_weight = tf.tile(center_weight, multiples)
 
-    # HARDCODE MAGIC... ToDo: Generalize and clean up
+    # HARDCODE MAGIC... ToDo: Generalize
     if filter_size[0:2] == [2, 0]:
         # hexagonal 2,0 Filter
-        corner_weights1 = new_weights([6] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights1)
+        corner_weights1 = new_weights([6] + filter_size[2:])
     elif filter_size[0:2] == [2, 1]:
         # hexagonal 2,1 Filter
-        corner_weights1 = new_weights([6] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights1)
+        corner_weights1 = new_weights([6] + filter_size[2:])
         corner_weights2 = []
         for i in range(6):
-            weights = new_weights(filter_size[2:],
-                                  float_precision=float_precision)
-            var_list.append(weights)
-            corner_weights2.extend([Z,  weights])
+            corner_weights2.extend([Z,  new_weights(filter_size[2:])])
         corner_weights2 = tf.stack(corner_weights2)
     elif filter_size[0:2] == [3, 0]:
         # hexagonal 3,0 Filter
-        corner_weights1 = new_weights([6] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights1)
-        corner_weights2 = new_weights([12] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights2)
+        corner_weights1 = new_weights([6] + filter_size[2:])
+        corner_weights2 = new_weights([12] + filter_size[2:])
     elif filter_size[0:2] == [3, 1]:
         # hexagonal 3,1 Filter
-        corner_weights1 = new_weights([6] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights1)
-        corner_weights2 = new_weights([12] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights2)
+        corner_weights1 = new_weights([6] + filter_size[2:])
+        corner_weights2 = new_weights([12] + filter_size[2:])
         corner_weights3 = []
         for i in range(6):
-            weights = new_weights(filter_size[2:],
-                                  float_precision=float_precision)
-            var_list.append(weights)
-            corner_weights3.extend([Z, weights, Z])
+            corner_weights3.extend([Z, new_weights(filter_size[2:]), Z])
         corner_weights3 = tf.stack(corner_weights3)
     elif filter_size[0:2] == [3, 2]:
         # hexagonal 3,2 Filter
-        corner_weights1 = new_weights([6] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights1)
-        corner_weights2 = new_weights([12] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights2)
+        corner_weights1 = new_weights([6] + filter_size[2:])
+        corner_weights2 = new_weights([12] + filter_size[2:])
         corner_weights3 = []
         for i in range(6):
-            weights = new_weights(filter_size[2:],
-                                  float_precision=float_precision)
-            var_list.append(weights)
-            corner_weights3.extend([Z, Z, weights])
+            corner_weights3.extend([Z, Z, new_weights(filter_size[2:])])
         corner_weights3 = tf.stack(corner_weights3)
     elif filter_size[0:2] == [4, 0]:
         # hexagonal 4,0 Filter
-        corner_weights1 = new_weights([6] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights1)
-        corner_weights2 = new_weights([12] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights2)
-        corner_weights3 = new_weights([18] + filter_size[2:],
-                                      float_precision=float_precision)
-        var_list.append(corner_weights3)
+        corner_weights1 = new_weights([6] + filter_size[2:])
+        corner_weights2 = new_weights([12] + filter_size[2:])
+        corner_weights2 = new_weights([18] + filter_size[2:])
     else:
         raise ValueError("get_dynamic_rotation_hex_kernel: Unsupported "
                          "hexagonal filter_size: {!r}".formt(filter_size[0:2]))
@@ -278,22 +241,21 @@ def get_dynamic_rotation_hex_kernel(filter_size, azimuth,
 
     rotated_kernel = tf.stack(rotated_kernel_rows, axis=1)
 
-    return rotated_kernel, var_list
+    return rotated_kernel
 
 
 # -------------------------------------------------------------------------
 #       hexagonal azimuth rotated filters
 # -------------------------------------------------------------------------
-def get_rotated_hex_kernel(filter_size, num_rotations,
-                           float_precision=FLOAT_PRECISION):
+def get_rotated_hex_kernel(filter_size, num_rotations):
     '''
     Create Weights for a hexagonal kernel.
     The kernel is rotated 'num_rotations' many times.
     Weights are shared over rotated versions.
     The Kernel will be of a hexagonal shape in the first two dimensions,
     while the other dimensions are normal.
-    The hexagonal kernel is of the shape:
-        [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
+    The hexagonal kernel is off the shape:
+    [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
     But elments with coordinates in the first two dimensions, that don't belong
     to the hexagon are set to a tf.Constant 0.
 
@@ -321,8 +283,6 @@ def get_rotated_hex_kernel(filter_size, num_rotations,
     num_rotations : int.
       number of rotational kernels to create.
       Kernels will be rotated by 360 degrees / num_rotations
-    float_precision : tf.dtype, optional
-        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
@@ -340,71 +300,62 @@ def get_rotated_hex_kernel(filter_size, num_rotations,
         Description
 
     '''
-    # define function to get new weights with correct shape
-    var_list = []
-
-    def get_new_weights(var_list):
-        weights = new_weights(filter_size[2:-2],
-                              float_precision=float_precision)
-        var_list.append(weights)
-        return weights
-
     no_of_dims = len(filter_size)
     rotated_filter_size = filter_size[2:-1] + [filter_size[-1]*num_rotations]
     azimuths = np.linspace(0, 360, num_rotations+1)[:-1]
-    Z = tf.zeros(filter_size[2:-2], dtype=float_precision)
-    center_weight = get_new_weights(var_list)
+    Z = tf.zeros(filter_size[2:-2], dtype=FLOAT_PRECISION)
+    center_weight = new_weights(filter_size[2:-2])
 
     # HARDCODE MAGIC... ToDo: Generalize
     if filter_size[0:2] == [2, 0]:
         # hexagonal 2,0 Filter
-        corner_weights1 = [get_new_weights(var_list) for i in range(6)]
-
+        corner_weights1 = [new_weights(filter_size[2:-2])
+                           for i in range(6)]
     elif filter_size[0:2] == [2, 1]:
         # hexagonal 2,1 Filter
-        corner_weights1 = [get_new_weights(var_list) for i in range(6)]
-
+        corner_weights1 = [new_weights(filter_size[2:-2])
+                           for i in range(6)]
         corner_weights2 = []
         for i in range(6):
-            corner_weights2.extend([Z,  get_new_weights(var_list)])
-
+            corner_weights2.extend([Z,  new_weights(filter_size[2:-2])])
     elif filter_size[0:2] == [3, 0]:
         # hexagonal 3,0 Filter
-        corner_weights1 = [get_new_weights(var_list) for i in range(6)]
-        corner_weights2 = [get_new_weights(var_list) for i in range(12)]
-
+        corner_weights1 = [new_weights(filter_size[2:-2])
+                           for i in range(6)]
+        corner_weights2 = [new_weights(filter_size[2:-2])
+                           for i in range(12)]
     elif filter_size[0:2] == [3, 1]:
         # hexagonal 3,1 Filter
-        corner_weights1 = [get_new_weights(var_list) for i in range(6)]
-        corner_weights2 = [get_new_weights(var_list) for i in range(12)]
-
+        corner_weights1 = [new_weights(filter_size[2:-2])
+                           for i in range(6)]
+        corner_weights2 = [new_weights(filter_size[2:-2])
+                           for i in range(12)]
         corner_weights3 = []
         for i in range(6):
-            corner_weights3.extend([Z, get_new_weights(var_list), Z])
-
+            corner_weights3.extend([Z, new_weights(filter_size[2:-2]), Z])
     elif filter_size[0:2] == [3, 2]:
         # hexagonal 3,2 Filter
-        corner_weights1 = [get_new_weights(var_list) for i in range(6)]
-        corner_weights2 = [get_new_weights(var_list) for i in range(12)]
-
+        corner_weights1 = [new_weights(filter_size[2:-2])
+                           for i in range(6)]
+        corner_weights2 = [new_weights(filter_size[2:-2])
+                           for i in range(12)]
         corner_weights3 = []
         for i in range(6):
-            corner_weights3.extend([Z, Z, get_new_weights(var_list)])
-
+            corner_weights3.extend([Z, Z, new_weights(filter_size[2:-2])])
     elif filter_size[0:2] == [4, 0]:
         # hexagonal 4,0 Filter
-        corner_weights1 = [get_new_weights(var_list) for i in range(6)]
-        corner_weights2 = [get_new_weights(var_list) for i in range(12)]
-        corner_weights3 = [get_new_weights(var_list) for i in range(18)]
-
+        corner_weights1 = [new_weights(filter_size[2:-2])
+                           for i in range(6)]
+        corner_weights2 = [new_weights(filter_size[2:-2])
+                           for i in range(12)]
+        corner_weights3 = [new_weights(filter_size[2:-2])
+                           for i in range(18)]
     else:
         raise ValueError("get_rotated_hex_kernel: Unsupported "
                          "hexagonal filter_size: {!r}".formt(filter_size[0:2]))
 
     rotated_kernels = []
-    in_out_channel_weights = new_weights([num_rotations]+filter_size[-2:],
-                                         float_precision=float_precision)
-    var_list.append(in_out_channel_weights)
+    in_out_channel_weights = new_weights([num_rotations]+filter_size[-2:])
 
     for i, azimuth in enumerate(azimuths):
         rotated_kernel_rows = []
@@ -464,4 +415,4 @@ def get_rotated_hex_kernel(filter_size, num_rotations,
 
     rotated_kernels = tf.concat(values=rotated_kernels,
                                 axis=len(filter_size)-1)
-    return rotated_kernels, var_list
+    return rotated_kernels

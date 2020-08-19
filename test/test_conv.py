@@ -57,12 +57,11 @@ class TestConvModule(unittest.TestCase):
               [-1.5634956, -5.2658362, 0.12334719, -4.874626, 4.04391],
               [2.1574607, -0.08705652, -2.270496, -0.37243897, 3.500473]]]]
 
-        result, kernel = conv.locally_connected_2d(input=data,
-                                                   num_outputs=num_outputs,
-                                                   filter_size=filter_size,
-                                                   kernel=kernel)
-        with tf.Session() as sess:
-            result = sess.run(result)
+        conv_layer = conv.LocallyConnected2d(input_shape=data.get_shape(),
+                                             num_outputs=num_outputs,
+                                             filter_size=filter_size,
+                                             kernel=kernel)
+        result = conv_layer(data)
         self.assertTrue(np.allclose(true_result, result, atol=1e-6))
 
     def test_locally_connected_3d(self):
@@ -112,12 +111,11 @@ class TestConvModule(unittest.TestCase):
                [1.2522638, 8.907527],
                [4.3867416, 1.9319328]]]]]
 
-        result, kernel = conv.locally_connected_3d(input=data,
-                                                   num_outputs=num_outputs,
-                                                   filter_size=filter_size,
-                                                   kernel=kernel)
-        with tf.Session() as sess:
-            result = sess.run(result)
+        conv_layer = conv.LocallyConnected3d(input_shape=data.get_shape(),
+                                             num_outputs=num_outputs,
+                                             filter_size=filter_size,
+                                             kernel=kernel)
+        result = conv_layer(data)
         self.assertTrue(np.allclose(true_result, result, atol=1e-6))
 
     def test_conv3d_stacked(self):
@@ -132,14 +130,12 @@ class TestConvModule(unittest.TestCase):
         padding_list = ['SAME']
         for strides, padding in product(strides_list, padding_list):
 
-            result_tf = tf.nn.convolution(input=data, filter=kernel,
+            result_tf = tf.nn.convolution(input=data, filters=kernel,
                                           strides=strides[1:-1],
                                           padding=padding)
             result = conv.conv3d_stacked(input=data, filter=kernel,
                                          strides=strides, padding=padding)
 
-            with tf.Session() as sess:
-                result, result_tf = sess.run([result, result_tf])
             self.assertTrue(np.allclose(result, result_tf, atol=1e-5))
 
     def test_conv4d_stacked(self):
@@ -168,6 +164,4 @@ class TestConvModule(unittest.TestCase):
                           [0.5695023]]]]]
 
         result = conv.conv4d_stacked(input=data, filter=kernel)
-        with tf.Session() as sess:
-            result = sess.run(result)
         self.assertTrue(np.allclose(true_result, result, atol=1e-6))

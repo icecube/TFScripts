@@ -7,11 +7,11 @@ from __future__ import division, print_function
 import numpy as np
 import tensorflow as tf
 
-# tfscripts specific imports
-from tfscripts.weights import new_weights
+# tfscripts.compat.v1 specific imports
+from tfscripts.compat.v1.weights import new_weights
 
 # constants
-from tfscripts import FLOAT_PRECISION
+from tfscripts.compat.v1 import FLOAT_PRECISION
 
 # -----------------------------------------------------------------------------
 #                           IceCube Constants
@@ -138,7 +138,7 @@ def get_icecube_string_from_hex_coord(a, b):
     return hex_string_coord_dict[(a, b)]
 
 
-def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
+def get_icecube_kernel(shape, get_ones=False):
     '''
     Get a kernel of shape 'shape' for IceCube where coordinates of no real
     strings are set to constant zeros.
@@ -152,20 +152,15 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
         If True, returns constant ones for real DOMs, zeros for virtual DOMs.
         If False, return trainable parameter for real DOMs,
                 zeros for virtual DOMs
-    float_precision : tf.dtype, optional
-        The tensorflow dtype describing the float precision to use.
 
     Returns
     -------
     tf.Tensor
         The icecube kernel with the desired shape.
-    list of tf.Variable
-        A list of tensorflow variables created in this function
     '''
-    zeros = tf.zeros(shape, dtype=float_precision)
-    ones = tf.ones(shape, dtype=float_precision)
+    zeros = tf.zeros(shape, dtype=FLOAT_PRECISION)
+    ones = tf.ones(shape, dtype=FLOAT_PRECISION)
 
-    var_list = []
     a_list = []
     for a in xrange(-4, 6):
 
@@ -177,9 +172,7 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
                 if get_ones:
                     weights = ones
                 else:
-                    weights = new_weights(shape,
-                                          float_precision=float_precision)
-                    var_list.append(weights)
+                    weights = new_weights(shape)
             else:
                 # virtual string, string does not actually exist
                 weights = zeros
@@ -187,4 +180,4 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
             b_list.append(weights)
     a_list.append(tf.stack(b_list))
     icecube_kernel = tf.stack(a_list)
-    return icecube_kernel, var_list
+    return icecube_kernel
