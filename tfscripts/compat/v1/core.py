@@ -162,7 +162,7 @@ def activation(layer, activation_type,
     # https://github.com/ibmua/learning-to-make-nn-in-python/
     #    blob/master/nn_classifier.py
     elif activation_type == 'requ':
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          tf.zeros_like(layer, dtype=FLOAT_PRECISION),
                          tf.square(layer))
 
@@ -171,7 +171,7 @@ def activation(layer, activation_type,
         alpha = 1.6733
         # from https://arxiv.org/abs/1706.02515
         #   self normalizing networks
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          tf.exp(layer) * tf.constant(alpha,
                                                      dtype=FLOAT_PRECISION)
                          - tf.constant(alpha,dtype=FLOAT_PRECISION),
@@ -185,22 +185,22 @@ def activation(layer, activation_type,
         layer = -tf.nn.relu(layer)
 
     elif activation_type == 'invrelu':
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0,
+        layer = tf.where(tf.less(layer, tf.constant(0,
                          dtype=FLOAT_PRECISION)), layer, (layer+1e-8)**-1)
 
     elif activation_type == 'sign':
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          layer, tf.sign(layer))
 
     elif activation_type == 'prelu':
         slope = new_weights(layer.get_shape().as_list()[1:]) + 1.0
-        layer = tf.compat.v1.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
+        layer = tf.where(tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
                          layer*slope, layer)
 
     elif activation_type == 'pelu':
         a = new_weights(layer.get_shape().as_list()[1:]) + 1.0
         b = new_weights(layer.get_shape().as_list()[1:]) + 1.0
-        layer = tf.compat.v1.where(tf.less(layer,
+        layer = tf.where(tf.less(layer,
                          tf.constant(0, dtype=FLOAT_PRECISION)),
                          (tf.exp(layer/b) - 1)*a, layer*(a/b))
 

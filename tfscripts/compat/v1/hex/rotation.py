@@ -81,8 +81,8 @@ def tf_get_rotated_corner_weights(corner_weights, azimuth):
         index_2 = i - b - 1
 
         # correct negative indices
-        index_1 = tf.compat.v1.where(index_1 < 0, size + index_1, index_1)
-        index_2 = tf.compat.v1.where(index_2 < 0, size + index_2, index_2)
+        index_1 = tf.where(index_1 < 0, size + index_1, index_1)
+        index_2 = tf.where(index_2 < 0, size + index_2, index_2)
 
         newCorner_i = (tf.gather(corner_weights, index_1) + a / degree_steps *
                        (tf.gather(corner_weights, index_2) -
