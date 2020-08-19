@@ -349,8 +349,7 @@ def avg_pool4d_stacked(input, ksize, strides, padding):
                                             strides=strides[:4]+strides[5:],
                                             padding=padding)
                                             )
-                    avg_tensors_t_s = tf.compat.v1.div(
-                        tf.add_n(tensors_t_averaged), len_ts)
+                    avg_tensors_t_s = tf.add_n(tensors_t_averaged) / len_ts
 
                     # put together
                     result_t.append(avg_tensors_t_s)
@@ -369,8 +368,7 @@ def avg_pool4d_stacked(input, ksize, strides, padding):
                                              strides=strides[:4]+strides[5:],
                                              padding=padding)
                                              )
-                avg_tensors_t_s = tf.compat.v1.div(
-                    tf.add_n(tensors_t_averaged), len_ts)
+                avg_tensors_t_s = tf.add_n(tensors_t_averaged) / len_ts
 
                 # put together
                 result_t.append(avg_tensors_t_s)
