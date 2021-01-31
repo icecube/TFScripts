@@ -736,9 +736,13 @@ class FCLayer(tf.Module):
 
         # Create new weights and biases.
         if weights is None:
-            weights = new_weights(shape=[num_inputs, num_outputs])
+            weights = new_weights(
+                shape=[num_inputs, num_outputs],
+                float_precision=float_precision,
+            )
         if biases is None:
-            biases = new_biases(length=num_outputs)
+            biases = new_biases(
+                length=num_outputs, float_precision=float_precision)
 
         self.biases = biases
         self.weights = weights
@@ -916,10 +920,15 @@ class ChannelWiseFCLayer(tf.Module):
 
         # Create new weights and biases.
         if weights is None:
-            weights = new_weights(shape=[num_channels, num_inputs,
-                                         num_outputs])
+            weights = new_weights(
+                shape=[num_channels, num_inputs, num_outputs],
+                float_precision=float_precision,
+            )
         if biases is None:
-            biases = new_weights(shape=[num_outputs, num_channels])
+            biases = new_weights(
+                shape=[num_outputs, num_channels],
+                float_precision=float_precision,
+            )
 
         self.biases = biases
         self.weights = weights
