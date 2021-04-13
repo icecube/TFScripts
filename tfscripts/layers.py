@@ -503,7 +503,7 @@ class ConvNdLayer(tf.Module):
 
         # get shape of activation input
         # todo: figure out better way to obtain this
-        dummy_data = tf.ones([1] + input_shape[1:])
+        dummy_data = tf.ones([1] + input_shape[1:], dtype=float_precision)
         conv_layer_output = self.conv_layer(dummy_data)
 
         self.activation = core.Activation(
