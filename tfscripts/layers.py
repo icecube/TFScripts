@@ -139,6 +139,7 @@ class ConvNdLayer(tf.Module):
                  dilation_rate=None,
                  use_residual=False,
                  method='convolution',
+                 repair_std_deviation=True,
                  var_list=None,
                  weights=None,
                  biases=None,
@@ -241,6 +242,12 @@ class ConvNdLayer(tf.Module):
             Which convolution method to use for the layer, e.g.:
                 'convolution', 'dynamic_convolution', 'local_trafo'.
                 For details, see: tfscripts.conv.trans3d_op
+        repair_std_deviation : bool, optional
+            If true, the std deviation of the output will be repaired to be
+            closer to 1. This helps to maintain a normalized throughput
+            throughout the network.
+            Note: this is only approximative and assume that the input has
+            a std deviation of 1.
         var_list : list of tf.Variable, optional
             If 'weights' is provided, var_list must be passed as well.
             It must include a list of Variables of which the weights
@@ -273,11 +280,6 @@ class ConvNdLayer(tf.Module):
             The tensorflow dtype describing the float precision to use.
         name : None, optional
             The name of the tensorflow module.
-
-        Returns
-        -------
-        TYPE
-            Description
 
         Raises
         ------
@@ -523,6 +525,7 @@ class ConvNdLayer(tf.Module):
         self.pooling_padding = pooling_padding
         self.use_dropout = use_dropout
         self.method = method
+        self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
 
         # get shape of output
@@ -595,26 +598,31 @@ class ConvNdLayer(tf.Module):
         # the values need to be divided by this factor.
         # In the case of the hex_convolution, this factor gets reduced to
         # the number of non zero elements in the hex kernel.
-        if self.method.lower() == 'hex_convolution':
+        if self.repair_std_deviation:
+            if self.method.lower() == 'hex_convolution':
 
-            num_filter_vars = hx.get_num_hex_points(self.filter_size[0])
-            if len(self.filter_size) > 2:
-                # This should probably be *= , but empirically this provides
-                # better results... [At least for IceCube applications]
-                # Possibly because variance is actually a lot lower in input,
-                # since it will be padded with zeros and these will propagate
-                # to later layers.
-                num_filter_vars += np.prod(self.filter_size[2:])
+                num_filter_vars = hx.get_num_hex_points(self.filter_size[0])
+                if len(self.filter_size) > 2:
+                    # This should probably be *= , but empirically this
+                    # provides better results...
+                    # [At least for IceCube applications]
+                    # Possibly because variance is actually a lot lower in
+                    # input, since it will be padded with zeros and these will
+                    # propagate to later layers.
+                    num_filter_vars += np.prod(self.filter_size[2:])
 
-            layer = layer / np.sqrt(num_filter_vars * num_input_channels)
-        else:
-            layer = layer / np.sqrt(np.prod(self.filter_size)
-                                    * num_input_channels)
+                layer = layer / np.sqrt(num_filter_vars * num_input_channels)
+            else:
+                layer = layer / np.sqrt(np.prod(self.filter_size)
+                                        * num_input_channels)
 
         # Add the biases to the results of the convolution.
         # A bias-value is added to each filter-channel.
         if self.biases is not None:
-            layer = (layer + self.biases) / np.sqrt(2.)
+            if self.repair_std_deviation:
+                layer = (layer + self.biases) / np.sqrt(2.)
+            else:
+                layer = layer + self.biases
 
         # Apply activation and batch normalisation if specified
         layer = self.activation(layer, is_training=is_training)
@@ -692,6 +700,7 @@ class FCLayer(tf.Module):
                  weights=None,
                  biases=None,
                  max_out_size=None,
+                 repair_std_deviation=True,
                  float_precision=FLOAT_PRECISION,
                  name=None):
         """Initialize object
@@ -721,6 +730,12 @@ class FCLayer(tf.Module):
             The max_out_size for the layer.
             This must be a factor of number of channels.
             If None, no max_out is used in the layer.
+        repair_std_deviation : bool, optional
+            If true, the std deviation of the output will be repaired to be
+            closer to 1. This helps to maintain a normalized throughput
+            throughout the network.
+            Note: this is only approximative and assume that the input has
+            a std deviation of 1.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
         name : None, optional
@@ -785,6 +800,7 @@ class FCLayer(tf.Module):
         self.max_out_size = max_out_size
         self.use_residual = use_residual
         self.use_dropout = use_dropout
+        self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
 
     def __call__(self, inputs, is_training, keep_prob):
@@ -830,9 +846,12 @@ class FCLayer(tf.Module):
         layer = tf.matmul(inputs, self.weights)
 
         # repair to get std dev of 1
-        layer = layer / np.sqrt(num_inputs)
+        if self.repair_std_deviation:
+            layer = layer / np.sqrt(num_inputs)
 
-        layer = (layer + self.biases) / np.sqrt(2.)
+            layer = (layer + self.biases) / np.sqrt(2.)
+        else:
+            layer = layer + self.biases
 
         # Apply activation and batch normalisation if specified
         layer = self.activation(layer, is_training=is_training)
@@ -870,6 +889,7 @@ class ChannelWiseFCLayer(tf.Module):
                  weights=None,
                  biases=None,
                  max_out_size=None,
+                 repair_std_deviation=True,
                  float_precision=FLOAT_PRECISION,
                  name=None):
         """Initialize object
@@ -899,6 +919,12 @@ class ChannelWiseFCLayer(tf.Module):
             The max_out_size for the layer.
             This must be a factor of number of channels.
             If None, no max_out is used in the layer.
+        repair_std_deviation : bool, optional
+            If true, the std deviation of the output will be repaired to be
+            closer to 1. This helps to maintain a normalized throughput
+            throughout the network.
+            Note: this is only approximative and assume that the input has
+            a std deviation of 1.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
         name : None, optional
@@ -972,6 +998,7 @@ class ChannelWiseFCLayer(tf.Module):
         self.max_out_size = max_out_size
         self.use_residual = use_residual
         self.use_dropout = use_dropout
+        self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
 
     def __call__(self, inputs, is_training, keep_prob):
@@ -1025,9 +1052,12 @@ class ChannelWiseFCLayer(tf.Module):
         # layer: [batch, num_outputs, num_channel]
 
         # repair to get std dev of 1
-        layer = layer / np.sqrt(num_inputs)
+        if self.repair_std_deviation:
+            layer = layer / np.sqrt(num_inputs)
 
-        layer = (layer + self.biases) / np.sqrt(2.)
+            layer = (layer + self.biases) / np.sqrt(2.)
+        else:
+            layer = layer + self.biases
 
         # Apply activation and batch normalisation if specified
         layer = self.activation(layer, is_training=is_training)
@@ -1067,6 +1097,7 @@ class FCLayers(tf.Module):
                  weights_list=None,
                  biases_list=None,
                  max_out_size_list=None,
+                 repair_std_deviation_list=True,
                  float_precision=FLOAT_PRECISION,
                  name='fc_layer',
                  verbose=True,
@@ -1107,6 +1138,14 @@ class FCLayers(tf.Module):
             If None, no max_out is used in the corresponding layer.
             If only a single max_out_size is given, it will be used for all
             layers.
+        repair_std_deviation_list : bool or list of bool, optional
+            If true, the std deviation of the output will be repaired to be
+            closer to 1. This helps to maintain a normalized throughput
+            throughout the network.
+            Note: this is only approximative and assume that the input has
+            a std deviation of 1.
+            If only a single boolean is provided, it will be used for all
+            layers.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
         name : str, optional
@@ -1146,6 +1185,10 @@ class FCLayers(tf.Module):
         # create max out array
         if max_out_size_list is None:
             max_out_size_list = [None for i in range(num_layers)]
+        # create repair std deviation array
+        if isinstance(repair_std_deviation_list, bool):
+            repair_std_deviation_list = [
+                repair_std_deviation_list for i in range(num_layers)]
 
         # pick which fc layers to build
         if len(input_shape) == 3:
@@ -1177,6 +1220,7 @@ class FCLayers(tf.Module):
                     weights=weights_list[i],
                     biases=biases_list[i],
                     max_out_size=max_out_size_list[i],
+                    repair_std_deviation=repair_std_deviation_list[i],
                     float_precision=float_precision,
                     name='{}_{:03d}'.format(name, i),
                     )
@@ -1233,6 +1277,7 @@ class ConvNdLayers(tf.Module):
                  use_residual_list=False,
                  use_dropout_list=False,
                  method_list='convolution',
+                 repair_std_deviation_list=True,
                  weights_list=None,
                  biases_list=None,
                  trafo_list=None,
@@ -1343,6 +1388,14 @@ class ConvNdLayers(tf.Module):
                 'convolution', 'dynamic_convolution', 'local_trafo'.
                 For details, see: tfscripts.conv.trans3d_op
             If only a single method is provided, it will be used for all
+            layers.
+        repair_std_deviation_list : bool or list of bool, optional
+            If true, the std deviation of the output will be repaired to be
+            closer to 1. This helps to maintain a normalized throughput
+            throughout the network.
+            Note: this is only approximative and assume that the input has
+            a std deviation of 1.
+            If only a single boolean is provided, it will be used for all
             layers.
         weights_list : None or list of tf.Tensor, optional
             Optionally, the weights to be used in each layer can be provided.
@@ -1487,6 +1540,11 @@ class ConvNdLayers(tf.Module):
         if isinstance(method_list, str):
             method_list = [method_list for i in range(num_layers)]
 
+        # create repair std deviation array
+        if isinstance(repair_std_deviation_list, bool):
+            repair_std_deviation_list = [
+                repair_std_deviation_list for i in range(num_layers)]
+
         # create weights_list
         if weights_list is None:
             weights_list = [None for i in range(num_layers)]
@@ -1536,6 +1594,7 @@ class ConvNdLayers(tf.Module):
                     dilation_rate=dilation_rate_list[i],
                     use_residual=use_residual_list[i],
                     method=method_list[i],
+                    repair_std_deviation=repair_std_deviation_list[i],
                     weights=weights_list[i],
                     biases=biases_list[i],
                     trafo=trafo_list[i],
