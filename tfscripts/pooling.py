@@ -34,6 +34,14 @@ def pool3d(layer, ksize, strides, padding, pooling_type):
         The pooled output tensor.
     """
 
+    # tensorflow's pooling operations do not support float64, so
+    # use workaround with casting to float32 and then back again
+    if layer.dtype == tf.float64:
+        layer = tf.cast(layer, tf.float32)
+        was_float64 = True
+    else:
+        was_float64 = False
+
     # pool over depth, if necessary:
     if ksize[-1] != 1 or strides[-1] != 1:
         layer = pool_over_depth(layer,
@@ -70,6 +78,9 @@ def pool3d(layer, ksize, strides, padding, pooling_type):
                                          padding=padding)
             layer = (layer_avg + layer_max) / 2.
 
+    if was_float64:
+        layer = tf.cast(layer, tf.float64)
+
     return layer
 
 
@@ -96,6 +107,14 @@ def pool2d(layer, ksize, strides, padding, pooling_type):
     tf.Tensor
         The pooled output tensor.
     """
+
+    # tensorflow's pooling operations do not support float64, so
+    # use workaround with casting to float32 and then back again
+    if layer.dtype == tf.float64:
+        layer = tf.cast(layer, tf.float32)
+        was_float64 = True
+    else:
+        was_float64 = False
 
     # pool over depth, if necessary:
     if ksize[-1] != 1 or strides[-1] != 1:
@@ -130,6 +149,10 @@ def pool2d(layer, ksize, strides, padding, pooling_type):
                                      strides=strides,
                                      padding=padding)
         layer = (layer_avg + layer_max) / 2.
+
+    if was_float64:
+        layer = tf.cast(layer, tf.float64)
+
     return layer
 
 
