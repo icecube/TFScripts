@@ -115,7 +115,7 @@ def flatten_hex_layer(hex_layer):
 class ConvNdLayer(tf.Module):
     """TF Module for creating a new nD Convolutional Layer
 
-    2 <= n <=4 are supported.
+    1 <= n <=4 are supported.
     For n == 3 (3 spatial dimensions x, y, and z):
         input: (n+2)-dim tensor of shape [batch, x, y, z, num_input_channels]
         output: (n+2)-dim tensor of shape [batch, x_p, y_p, z_p, num_filters]
@@ -321,9 +321,18 @@ class ConvNdLayer(tf.Module):
                 pooling_ksize = [1, 2, 2, 1]
             if strides is None:
                 strides = [1, 1, 1, 1]
+                
+        elif num_dims == 1:
+            # 1D convolution
+            if pooling_strides is None:
+                pooling_strides = [1, 2, 1]
+            if pooling_ksize is None:
+                pooling_ksize = [1, 2, 1]
+            if strides is None:
+                strides = [1, 1, 1]
 
         else:
-            msg = 'Currently only 2D, 3D or 4D supported {!r}'
+            msg = 'Currently only 1D, 2D, 3D or 4D supported {!r}'
             raise ValueError(msg.format(input_shape))
 
         # make sure inferred dimension matches filter_size
@@ -348,7 +357,7 @@ class ConvNdLayer(tf.Module):
                 biases = new_biases(length=num_filters,
                                     float_precision=float_precision)
 
-            if num_dims == 2 or num_dims == 3:
+            if num_dims == 1 or num_dims == 2 or num_dims == 3:
                 # create a temp function with all parameters set
                 def temp_func(inputs):
                     return tf.nn.convolution(input=inputs,
@@ -373,7 +382,10 @@ class ConvNdLayer(tf.Module):
         # Hexagonal convolution
         # ---------------------
         elif method.lower() == 'hex_convolution':
-            if num_dims == 2 or num_dims == 3:
+            if num_dims == 1:
+                raise NotImplementedError(
+                    '1D hex_convolution not implemented')
+            elif num_dims == 2 or num_dims == 3:
                 self.conv_layer = hx.ConvHex(
                                             input_shape=input_shape,
                                             filter_size=filter_size,
@@ -414,7 +426,17 @@ class ConvNdLayer(tf.Module):
         # -------------------
         elif method.lower() == 'locally_connected':
 
-            if num_dims == 2:
+            if num_dims == 1:
+                self.conv_layer = conv.LocallyConnected1d(
+                                            input_shape=input_shape,
+                                            num_outputs=num_filters,
+                                            filter_size=filter_size,
+                                            kernel=weights,
+                                            strides=strides[1:-1],
+                                            padding=padding,
+                                            dilation_rate=dilation_rate,
+                                            float_precision=float_precision)
+            elif num_dims == 2:
                 self.conv_layer = conv.LocallyConnected2d(
                                             input_shape=input_shape,
                                             num_outputs=num_filters,
@@ -479,7 +501,7 @@ class ConvNdLayer(tf.Module):
 
             assert weights is not None
 
-            if num_dims == 2 or num_dims == 3:
+            if num_dims == 1 or num_dims == 2 or num_dims == 3:
                 # create a temp function with all parameters set
                 def temp_func(inputs):
                     return conv.dynamic_conv(inputs=inputs,
@@ -647,7 +669,14 @@ class ConvNdLayer(tf.Module):
         layer : tf.Tensor
             The layer on which to apply pooling
         """
-        if self.num_dims == 2:
+        if self.num_dims == 1:
+            layer = pooling.pool1d(layer=layer,
+                                   ksize=self.pooling_ksize,
+                                   strides=self.pooling_strides,
+                                   padding=self.pooling_padding,
+                                   pooling_type=self.pooling_type,
+                                   )
+        elif self.num_dims == 2:
             layer = pooling.pool2d(layer=layer,
                                    ksize=self.pooling_ksize,
                                    strides=self.pooling_strides,
@@ -678,7 +707,7 @@ class ConvNdLayer(tf.Module):
                 raise NotImplementedError("Pooling type not supported: "
                                           "{!r}".format(self.pooling_type))
         else:
-            raise NotImplementedError('Only supported 2d, 3d, 4d!')
+            raise NotImplementedError('Only supported 1d, 2d, 3d, 4d!')
 
         return layer
 
@@ -1258,7 +1287,7 @@ class FCLayers(tf.Module):
 
 
 class ConvNdLayers(tf.Module):
-    """TF Module for creating new conv2d, conv3d, and conv4d layers.
+    """TF Module for creating new conv1d, conv2d, conv3d, and conv4d layers.
     """
 
     def __init__(self,
@@ -1455,6 +1484,7 @@ class ConvNdLayers(tf.Module):
                 pooling_ksize_list = [1, 2, 2, 2, 2, 1]
             if strides_list is None:
                 strides_list = [1, 1, 1, 1, 1, 1]
+        
         elif num_dims == 5:
             # 3D convolution
             if pooling_strides_list is None:
@@ -1472,9 +1502,18 @@ class ConvNdLayers(tf.Module):
                 pooling_ksize_list = [1, 2, 2, 1]
             if strides_list is None:
                 strides_list = [1, 1, 1, 1]
+                
+        elif num_dims == 3:
+            # 1D convolution
+            if pooling_strides_list is None:
+                pooling_strides_list = [1, 2, 1]
+            if pooling_ksize_list is None:
+                pooling_ksize_list = [1, 2, 1]
+            if strides_list is None:
+                strides_list = [1, 1, 1]
 
         else:
-            msg = 'Currently only 2D, 3D, or 4D supported {!r}'
+            msg = 'Currently only 1D, 2D, 3D, or 4D supported {!r}'
             raise ValueError(msg.format(input_shape))
 
         num_layers = len(num_filters_list)

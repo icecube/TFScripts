@@ -156,6 +156,78 @@ def pool2d(layer, ksize, strides, padding, pooling_type):
     return layer
 
 
+def pool1d(layer, ksize, strides, padding, pooling_type):
+    """Convenience function to perform pooling in 1D
+
+    Parameters
+    ----------
+    layer : tf.Tensor
+        Input tensor.
+    ksize : int
+        Size of pooling kernel in each dimension:
+            [size_batch, size_x, size_channel]
+    strides : int
+        Stride along each dimension:
+            [stride_batch, stride_x, stride_channel]
+    padding : str
+      The type of padding to be used. 'SAME' or 'VALID' are supported.
+    pooling_type : str
+        The type of pooling to be used.
+
+    Returns
+    -------
+    tf.Tensor
+        The pooled output tensor.
+    """
+
+    # tensorflow's pooling operations do not support float64, so
+    # use workaround with casting to float32 and then back again
+    if layer.dtype == tf.float64:
+        layer = tf.cast(layer, tf.float32)
+        was_float64 = True
+    else:
+        was_float64 = False
+        
+    # pool over depth, if necessary:
+    if ksize[-1] != 1 or strides[-1] != 1:
+        layer = pool_over_depth(layer,
+                                ksize=ksize[-1],
+                                stride=strides[-1],
+                                padding=padding,
+                                pooling_type=pooling_type)
+        ksize = list(ksize)
+        strides = list(strides)
+        ksize[-1] = 1
+        strides[-1] = 1
+
+    # Use pooling to down-sample the image resolution?
+    if pooling_type == 'max':
+        layer = tf.nn.max_pool1d(input=layer,
+                                 ksize=ksize,
+                                 strides=strides,
+                                 padding=padding)
+    elif pooling_type == 'avg':
+        layer = tf.nn.avg_pool1d(input=layer,
+                                 ksize=ksize,
+                                 strides=strides,
+                                 padding=padding)
+    elif pooling_type == 'max_avg':
+        layer_max = tf.nn.max_pool1d(input=layer,
+                                     ksize=ksize,
+                                     strides=strides,
+                                     padding=padding)
+        layer_avg = tf.nn.avg_pool1d(input=layer,
+                                     ksize=ksize,
+                                     strides=strides,
+                                     padding=padding)
+        layer = (layer_avg + layer_max) / 2.
+
+    if was_float64:
+        layer = tf.cast(layer, tf.float64)
+
+    return layer
+
+
 def pool_over_depth(layer, ksize, stride, padding, pooling_type):
     '''
     Performs pooling over last dimension of layer.
