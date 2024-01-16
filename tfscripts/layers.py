@@ -1100,7 +1100,7 @@ class FCLayers(tf.Module):
                  repair_std_deviation_list=True,
                  float_precision=FLOAT_PRECISION,
                  name='fc_layer',
-                 verbose=True,
+                 verbose=False,
                  ):
         """Initialize object
 
@@ -1286,7 +1286,7 @@ class ConvNdLayers(tf.Module):
                  hex_zero_out_list=False,
                  float_precision=FLOAT_PRECISION,
                  name='conv_{}d_layer',
-                 verbose=True,
+                 verbose=False,
                  ):
         """Initialize object
 
