@@ -1,5 +1,3 @@
-import tensorflow as tf
-
 from .__about__ import (
     __version_major__,
     __version_minor__,
@@ -21,5 +19,11 @@ __all__ = [
     "FLOAT_PRECISION",
 ]
 
-# constants
-FLOAT_PRECISION = tf.float32
+try:
+    import tensorflow as tf
+
+    # constants
+    FLOAT_PRECISION = tf.float32
+except ImportError:
+    FLOAT_PRECISION = "float32"
+    print("Tensorflow not found. Some functions will not work.")
