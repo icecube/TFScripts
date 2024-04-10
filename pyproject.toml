@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tfscripts"
-description = "Helper functions for tensorflow"
+description = "Collection of TF functions and helpful additions"
 readme = "README.md"
 dynamic = ["version"]
 authors = [
