@@ -65,6 +65,7 @@ class DenseNN(tf.keras.Model):
 
         # create variables for model trafo
         trafo_shape = (1, self._input_shape[1])
+        y_out_shape = (1, self.fc_sizes[-1])
         self.trafo_model_initialized = False
         self.x_mean = self.add_weight(
             name='trafo_model_x_mean',
@@ -76,6 +77,20 @@ class DenseNN(tf.keras.Model):
         self.x_std = self.add_weight(
             name='trafo_model_x_std',
             shape=trafo_shape,
+            initializer="ones",
+            trainable=False,
+            dtype=tf_dtype,
+        )
+        self.y_mean = self.add_weight(
+            name='trafo_model_y_mean',
+            shape=y_out_shape,
+            initializer="zeros",
+            trainable=False,
+            dtype=tf_dtype,
+        )
+        self.y_std = self.add_weight(
+            name='trafo_model_y_std',
+            shape=y_out_shape,
             initializer="ones",
             trainable=False,
             dtype=tf_dtype,
@@ -101,7 +116,7 @@ class DenseNN(tf.keras.Model):
         # variables created in sub-module are not found otherwise..
         self._fc_vars = self.fc_layers.variables
 
-    def create_trafo_model(self, inputs):
+    def create_trafo_model(self, inputs, y_true):
         """Create trafo model
 
         Parameters
@@ -109,9 +124,16 @@ class DenseNN(tf.keras.Model):
         inputs : tf.Tensor or array_like
             The input data.
             Shape: [n_batch, n_inputs]
+        y_true: tf.Tensor or array_like
+            The labels for the input data.
+            Shape: [n_batch, n_labels]
         """
         self.x_mean.assign(np.mean(inputs, axis=0, keepdims=True))
         self.x_std.assign(np.std(inputs, axis=0, keepdims=True))
+
+        self.y_mean.assign(np.mean(y_true, axis=0, keepdims=True))
+        self.y_std.assign(np.std(y_true, axis=0, keepdims=True))
+
         self.trafo_model_initialized = True
 
     def _check_trafo_model(self):
@@ -155,8 +177,13 @@ class DenseNN(tf.keras.Model):
         # normalize input data
         inputs_trafo = (inputs - self.x_mean) / (1e-3 + self.x_std)
 
-        return self.fc_layers(
+        output_trafo = self.fc_layers(
             inputs_trafo, is_training=training, keep_prob=keep_prob)[-1]
+
+        # invert normalization of labels
+        output = output_trafo * (1e-3 + self.y_std) + self.y_mean
+
+        return output
 
     def save_weights(self, filepath, **kwargs):
         """Save Model weights
@@ -364,12 +391,21 @@ class DenseNNGaussian(DenseNN):
             inputs_unc = inputs_trafo
         outputs_unc = self.fc_layers_unc(
             inputs_unc, is_training=training, keep_prob=keep_prob)[-1]
-        
+
+        # set initialized value to variance of 1,
+        # which would be a correct initial guess if labels
+        # are also normalized
+        outputs_unc += 1.0
+
+        # invert normalization of labels
+        outputs = main_output[-1] * (1e-3 + self.y_std) + self.y_mean
+        outputs_unc = outputs_unc * (1e-3 + self.y_std)
+
         # force positive value
         outputs_unc = tf.math.abs(outputs_unc) + self.min_sigma_value
         
         # return
-        return main_output[-1], outputs_unc
+        return outputs, outputs_unc
 
     def get_config(self):
         """Get Configuration of model
