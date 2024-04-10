@@ -7,21 +7,19 @@ from tfscripts import layers as tfs
 
 
 class DenseNN(tf.keras.Model):
-
-    """Dense Neural Network
-    """
+    """Dense Neural Network"""
 
     def __init__(
-            self,
-            input_shape,
-            fc_sizes,
-            use_dropout_list=False,
-            activation_list='elu',
-            use_batch_normalisation_list=False,
-            use_residual_list=False,
-            dtype='float32',
-            verbose=False,
-            ):
+        self,
+        input_shape,
+        fc_sizes,
+        use_dropout_list=False,
+        activation_list="elu",
+        use_batch_normalisation_list=False,
+        use_residual_list=False,
+        dtype="float32",
+        verbose=False,
+    ):
         """Dense NN Model
 
         Parameters
@@ -68,28 +66,28 @@ class DenseNN(tf.keras.Model):
         y_out_shape = (1, self.fc_sizes[-1])
         self.trafo_model_initialized = False
         self.x_mean = self.add_weight(
-            name='trafo_model_x_mean',
+            name="trafo_model_x_mean",
             shape=trafo_shape,
             initializer="zeros",
             trainable=False,
             dtype=tf_dtype,
         )
         self.x_std = self.add_weight(
-            name='trafo_model_x_std',
+            name="trafo_model_x_std",
             shape=trafo_shape,
             initializer="ones",
             trainable=False,
             dtype=tf_dtype,
         )
         self.y_mean = self.add_weight(
-            name='trafo_model_y_mean',
+            name="trafo_model_y_mean",
             shape=y_out_shape,
             initializer="zeros",
             trainable=False,
             dtype=tf_dtype,
         )
         self.y_std = self.add_weight(
-            name='trafo_model_y_std',
+            name="trafo_model_y_std",
             shape=y_out_shape,
             initializer="ones",
             trainable=False,
@@ -108,7 +106,7 @@ class DenseNN(tf.keras.Model):
             biases_list=None,
             max_out_size_list=None,
             float_precision=tf_dtype,
-            name='fc_layer',
+            name="fc_layer",
             verbose=verbose,
         )
 
@@ -142,12 +140,12 @@ class DenseNN(tf.keras.Model):
         Raises
         ------
         ValueError
-            If trafo model has not been intialized
+            If trafo model has not been initialized
         """
         if not self.trafo_model_initialized:
             raise ValueError(
-                'Trafo model is not yet configured. '
-                'Run model.create_trafo_model() first'
+                "Trafo model is not yet configured. "
+                "Run model.create_trafo_model() first"
             )
 
     def call(self, inputs, training=False, keep_prob=None):
@@ -178,7 +176,8 @@ class DenseNN(tf.keras.Model):
         inputs_trafo = (inputs - self.x_mean) / (1e-3 + self.x_std)
 
         output_trafo = self.fc_layers(
-            inputs_trafo, is_training=training, keep_prob=keep_prob)[-1]
+            inputs_trafo, is_training=training, keep_prob=keep_prob
+        )[-1]
 
         # invert normalization of labels
         output = output_trafo * (1e-3 + self.y_std) + self.y_mean
@@ -221,8 +220,7 @@ class DenseNN(tf.keras.Model):
         **kwargs
             Keyword arguments passed on to tf.keras.Model.load_weights()
         """
-        super().load_weights(
-            filepath=filepath, **kwargs).expect_partial()
+        super().load_weights(filepath=filepath, **kwargs).expect_partial()
         self.trafo_model_initialized = True
 
     def load(self, **kwargs):
@@ -247,43 +245,42 @@ class DenseNN(tf.keras.Model):
             to serealize and deserealize the model.
         """
         config = {
-            'input_shape': self._input_shape,
-            'fc_sizes': self.fc_sizes,
-            'use_dropout_list': self.use_dropout_list,
-            'activation_list': self.activation_list,
-            'use_batch_normalisation_list': self.use_batch_normalisation_list,
-            'use_residual_list': self.use_residual_list,
-            'dtype': self.dtype,
+            "input_shape": self._input_shape,
+            "fc_sizes": self.fc_sizes,
+            "use_dropout_list": self.use_dropout_list,
+            "activation_list": self.activation_list,
+            "use_batch_normalisation_list": self.use_batch_normalisation_list,
+            "use_residual_list": self.use_residual_list,
+            "dtype": self.dtype,
         }
         for key, value in config.items():
             if isinstance(value, (list, tuple)):
                 config[key] = list(value)
         return deepcopy(config)
-    
-class DenseNNGaussian(DenseNN):
 
-    """Dense Neural Network with Gaussian uncertainty prediction
-    """
+
+class DenseNNGaussian(DenseNN):
+    """Dense Neural Network with Gaussian uncertainty prediction"""
 
     def __init__(
-            self, 
-            fc_sizes_unc,
-            use_dropout_list_unc=False,
-            activation_list_unc='elu',
-            use_batch_normalisation_list_unc=False,
-            use_residual_list_unc=False,
-            use_nth_fc_layer_as_input=None,
-            min_sigma_value=1e-3,
-            verbose=False,
-            **kwargs
+        self,
+        fc_sizes_unc,
+        use_dropout_list_unc=False,
+        activation_list_unc="elu",
+        use_batch_normalisation_list_unc=False,
+        use_residual_list_unc=False,
+        use_nth_fc_layer_as_input=None,
+        min_sigma_value=1e-3,
+        verbose=False,
+        **kwargs,
     ):
-        """Guassian Uncertainty NN (Dense NN Model)
+        """Gaussian Uncertainty NN (Dense NN Model)
 
         Parameters
         ----------
         fc_sizes_unc : list of int
-            The number of nodes for each uncertainty layer. The ith int 
-            denotes the number of nodes for the ith layer. The number of 
+            The number of nodes for each uncertainty layer. The ith int
+            denotes the number of nodes for the ith layer. The number of
             layers is inferred from the length of 'fc_sizes_unc'.
         use_dropout_list_unc : bool, optional
             Denotes whether to use dropout in the uncertainty layers.
@@ -291,21 +288,21 @@ class DenseNNGaussian(DenseNN):
             layers.
         activation_list_unc : str or callable, optional
             The activation function to be used in each uncertainty layer.
-            If only one activation is provided, it will be used for all 
+            If only one activation is provided, it will be used for all
             layers.
         use_batch_normalisation_list_unc : bool or list of bool, optional
-            Denotes whether to use batch normalisation in the uncertainty 
+            Denotes whether to use batch normalisation in the uncertainty
             layers. If only a single boolean is provided, it will be used for
             all layers.
         use_residual_list_unc : bool or list of bool, optional
             Denotes whether to use residual additions in the uncertainty
-            layers. If only a single boolean is provided, it will be used 
+            layers. If only a single boolean is provided, it will be used
             for all layers.
         use_nth_fc_layer_as_input : None or int, optional
-            If None, the same inputs as for the main NN will be used as 
+            If None, the same inputs as for the main NN will be used as
             input for the uncertainty network.
             If not None, the nth layer of the main NN will be used as input
-            for the uncertainty network. 
+            for the uncertainty network.
             If negative, the layer is counted from the last layer.
             For example, use_nth_fc_layer_as_input=-2 denotes the second last
             layer.
@@ -316,21 +313,26 @@ class DenseNNGaussian(DenseNN):
             Keyword arguments that are passed on to DenseNN initializer.
         """
         super().__init__(verbose=verbose, **kwargs)
-        
+
         self.fc_sizes_unc = fc_sizes_unc
         self.use_dropout_list_unc = use_dropout_list_unc
         self.activation_list_unc = activation_list_unc
-        self.use_batch_normalisation_list_unc = use_batch_normalisation_list_unc
+        self.use_batch_normalisation_list_unc = (
+            use_batch_normalisation_list_unc
+        )
         self.use_residual_list_unc = use_residual_list_unc
         self.use_nth_fc_layer_as_input = use_nth_fc_layer_as_input
         self.min_sigma_value = min_sigma_value
-        
+
         if self.use_nth_fc_layer_as_input is not None:
-            self._input_shape_unc = [-1, self.fc_sizes[self.use_nth_fc_layer_as_input]]
+            self._input_shape_unc = [
+                -1,
+                self.fc_sizes[self.use_nth_fc_layer_as_input],
+            ]
         else:
             self._input_shape_unc = self._input_shape
-        
-         # create weights and layers for uncertainty network
+
+        # create weights and layers for uncertainty network
         self.fc_layers_unc = tfs.FCLayers(
             input_shape=self._input_shape_unc,
             fc_sizes=self.fc_sizes_unc,
@@ -342,7 +344,7 @@ class DenseNNGaussian(DenseNN):
             biases_list=None,
             max_out_size_list=None,
             float_precision=getattr(tf, self.dtype),
-            name='fc_layer_unc',
+            name="fc_layer_unc",
             verbose=verbose,
         )
 
@@ -380,17 +382,19 @@ class DenseNNGaussian(DenseNN):
         # normalize input data
         inputs_trafo = (inputs - self.x_mean) / (1e-3 + self.x_std)
 
-        # get ouputs of main NN for value prediction
+        # get outputs of main NN for value prediction
         main_output = self.fc_layers(
-            inputs_trafo, is_training=training, keep_prob=keep_prob)
-        
+            inputs_trafo, is_training=training, keep_prob=keep_prob
+        )
+
         # run uncertainty sub-nework
         if self.use_nth_fc_layer_as_input is not None:
             inputs_unc = main_output[self.use_nth_fc_layer_as_input]
         else:
             inputs_unc = inputs_trafo
         outputs_unc = self.fc_layers_unc(
-            inputs_unc, is_training=training, keep_prob=keep_prob)[-1]
+            inputs_unc, is_training=training, keep_prob=keep_prob
+        )[-1]
 
         # set initialized value to variance of 1,
         # which would be a correct initial guess if labels
@@ -403,7 +407,7 @@ class DenseNNGaussian(DenseNN):
 
         # force positive value
         outputs_unc = tf.math.abs(outputs_unc) + self.min_sigma_value
-        
+
         # return
         return outputs, outputs_unc
 
@@ -417,13 +421,15 @@ class DenseNNGaussian(DenseNN):
             to serealize and deserealize the model.
         """
         config = super().get_config()
-        config.update({
-            'fc_sizes_unc': self.fc_sizes_unc,
-            'use_dropout_list_unc': self.use_dropout_list_unc,
-            'activation_list_unc': self.activation_list_unc,
-            'use_batch_normalisation_list_unc': self.use_batch_normalisation_list_unc,
-            'use_residual_list_unc': self.use_residual_list_unc,
-            'use_nth_fc_layer_as_input': self.use_nth_fc_layer_as_input,
-            'min_sigma_value': self.min_sigma_value,
-        })
+        config.update(
+            {
+                "fc_sizes_unc": self.fc_sizes_unc,
+                "use_dropout_list_unc": self.use_dropout_list_unc,
+                "activation_list_unc": self.activation_list_unc,
+                "use_batch_normalisation_list_unc": self.use_batch_normalisation_list_unc,
+                "use_residual_list_unc": self.use_residual_list_unc,
+                "use_nth_fc_layer_as_input": self.use_nth_fc_layer_as_input,
+                "min_sigma_value": self.min_sigma_value,
+            }
+        )
         return deepcopy(config)

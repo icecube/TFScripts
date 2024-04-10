@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tfscripts"
+description = "Collection of TF functions and helpful additions"
+readme = "README.md"
+dynamic = ["version"]
+authors = [
+    { name = "Mirco Huennefeld", email = "mirco.huennefeld@tu-dortmund.de" },
+]
+maintainers = [
+    { name = "Mirco Huennefeld", email = "mirco.huennefeld@tu-dortmund.de" },
+]
+requires-python = ">=3.7"
+
+dependencies = ["numpy", "matplotlib", "tensorflow"]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Statistics",
+]
+
+[project.optional-dependencies]
+dev = ["pre-commit","black","ruff"]
+test = ["pytest", "coverage", "codecov"]
+
+[project.urls]
+Homepage = "https://github.com/icecube/TFScripts"
+Documentation = "https://github.com/icecube/TFScripts"
+"Bug Tracker" = "https://github.com/icecube/TFScripts/issues"
+Discussions = "https://github.com/icecube/TFScripts/discussions"
+
+[tool.setuptools]
+packages = ["tfscripts"]
+
+[tool.setuptools.dynamic]
+version = {attr = "tfscripts.__version__"}
+
+[tool.black]
+line-length = 79
+target-version = ["py38"]
+
+[tool.ruff]
+# select = ["ALL"]
+fixable = ["I"]
+ignore = [
+    "D213",   # multi-line-summary-second-line incompatible with multi-line-summary-first-line
+    "D203",   # one-blank-line-before-class" incompatible with no-blank-line-before-class
+    "D401",   # non-imperative-mood
+    "D417",   # undocumented-param
+    "ANN101", # missing-type-self
+    "ANN401", # any-type
+    "FBT",    # flake8-boolean-trap
+    "INP",    # flake8-no-pep420
+    "T20",    # flake8-print
+    "TCH",    # flake8-type-checking
+    "S101",   # assert-used
+    "F401",   # imported but unused. NOTE: sooner or later, we should not ignore this
+    ]
+line-length = 79
+target-version = "py38"
+
+[tool.ruff.pydocstyle]
+convention = "numpy"
