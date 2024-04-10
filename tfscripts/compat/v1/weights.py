@@ -1,8 +1,8 @@
-'''
+"""
 Core functions of tfscripts:
 
     Create weights and biases
-'''
+"""
 
 from __future__ import division, print_function
 
@@ -31,14 +31,17 @@ def new_weights(shape, stddev=1.0, name="weights"):
     tf.Tensor
         A tensor with the weights.
     """
-    return tf.Variable(tf.random.truncated_normal(
-                            shape, stddev=stddev, dtype=FLOAT_PRECISION),
-                       name=name,
-                       dtype=FLOAT_PRECISION)
+    return tf.Variable(
+        tf.random.truncated_normal(
+            shape, stddev=stddev, dtype=FLOAT_PRECISION
+        ),
+        name=name,
+        dtype=FLOAT_PRECISION,
+    )
 
 
 def new_kernel_weights(shape, stddev=0.01, name="weights"):
-    '''
+    """
     Get weights for a convolutional kernel. The weights will be initialised,
     so that convolution performs matrix multiplication over a single pixel.
 
@@ -59,11 +62,12 @@ def new_kernel_weights(shape, stddev=0.01, name="weights"):
     tf.Tensor
         A tensor with the weights.
 
-    '''
+    """
     weight_initialisation = np.zeros(shape)
     spatial_shape = shape[:-2]
-    middle_index = [slice((dim - 1) // 2,
-                    (dim - 1) // 2 + 1) for dim in spatial_shape]
+    middle_index = [
+        slice((dim - 1) // 2, (dim - 1) // 2 + 1) for dim in spatial_shape
+    ]
 
     # Set value in the middle to 1 and divide by the sqrt of
     # num_inputs to maintain normal distributed output.
@@ -71,14 +75,14 @@ def new_kernel_weights(shape, stddev=0.01, name="weights"):
     weight_initialisation[middle_index] = 1.0 / np.sqrt(shape[-2])
 
     # add random noise to break symmetry
-    weight_initialisation += np.random.normal(size=shape, loc=0.0,
-                                              scale=stddev)
+    weight_initialisation += np.random.normal(
+        size=shape, loc=0.0, scale=stddev
+    )
 
-    return tf.Variable(weight_initialisation,
-                       name=name, dtype=FLOAT_PRECISION)
+    return tf.Variable(weight_initialisation, name=name, dtype=FLOAT_PRECISION)
 
 
-def new_biases(length, stddev=1.0, name='biases'):
+def new_biases(length, stddev=1.0, name="biases"):
     """Get new biases.
 
     Parameters
@@ -93,21 +97,23 @@ def new_biases(length, stddev=1.0, name='biases'):
     tf.Tensor
         A tensor with the biases.
     """
-    return tf.Variable(tf.random.truncated_normal(shape=[length],
-                                           stddev=stddev,
-                                           dtype=FLOAT_PRECISION),
-                       name=name, dtype=FLOAT_PRECISION)
+    return tf.Variable(
+        tf.random.truncated_normal(
+            shape=[length], stddev=stddev, dtype=FLOAT_PRECISION
+        ),
+        name=name,
+        dtype=FLOAT_PRECISION,
+    )
     # return tf.Variable(tf.random_normal(shape=[length],
     #                                     stddev=2.0/length,
     #                                     dtype=FLOAT_PRECISION),
     #                    name=name, dtype=FLOAT_PRECISION)
 
 
-def create_conv_nd_layers_weights(num_input_channels,
-                                  filter_size_list,
-                                  num_filters_list,
-                                  name='conv_{}d'):
-    '''Create weights and biases for conv 3d layers
+def create_conv_nd_layers_weights(
+    num_input_channels, filter_size_list, num_filters_list, name="conv_{}d"
+):
+    """Create weights and biases for conv 3d layers
 
     Parameters
     ----------
@@ -135,23 +141,24 @@ def create_conv_nd_layers_weights(num_input_channels,
     -------
     list of tf.Tensor, list of tf.Tensor
         Returns the list of weight and bias tensors for each layer
-    '''
+    """
 
     num_dims = len(filter_size_list[0])
     name = name.format(num_dims)
 
     weights_list = []
     biases_list = []
-    for i, (filter_size, num_filters) in enumerate(zip(filter_size_list,
-                                                       num_filters_list)):
+    for i, (filter_size, num_filters) in enumerate(
+        zip(filter_size_list, num_filters_list)
+    ):
 
         # Shape of the filter-weights for the convolution.
         shape = list(filter_size) + [num_input_channels, num_filters]
         if num_dims == 1:
             shape = shape.insert(1, 1)
 
-        weight_name = 'weights_{}_{:03d}'.format(name, i)
-        bias_name = 'biases_{}_{:03d}'.format(name, i)
+        weight_name = "weights_{}_{:03d}".format(name, i)
+        bias_name = "biases_{}_{:03d}".format(name, i)
 
         # weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
         weights_list.append(new_weights(shape=shape, name=weight_name))
@@ -163,11 +170,10 @@ def create_conv_nd_layers_weights(num_input_channels,
     return weights_list, biases_list
 
 
-def create_fc_layers_weights(num_inputs,
-                             fc_sizes,
-                             max_out_size_list=None,
-                             name='fc'):
-    '''
+def create_fc_layers_weights(
+    num_inputs, fc_sizes, max_out_size_list=None, name="fc"
+):
+    """
     Create weights and biases for
     fully connected layers
 
@@ -187,21 +193,23 @@ def create_fc_layers_weights(num_inputs,
     -------
     list of tf.Tensor, list of tf.Tensor
         Returns the list of weight and bias tensors for each layer
-    '''
+    """
     # create max out array
     if max_out_size_list is None:
         max_out_size_list = [None for i in range(len(fc_sizes))]
 
     weights_list = []
     biases_list = []
-    for i, (num_outputs, max_out_size) in enumerate(zip(fc_sizes,
-                                                        max_out_size_list)):
+    for i, (num_outputs, max_out_size) in enumerate(
+        zip(fc_sizes, max_out_size_list)
+    ):
 
-        weight_name = 'weights_{}_{:03d}'.format(name, i)
-        bias_name = 'biases_{}_{:03d}'.format(name, i)
+        weight_name = "weights_{}_{:03d}".format(name, i)
+        bias_name = "biases_{}_{:03d}".format(name, i)
 
-        weights_list.append(new_weights(shape=[num_inputs, num_outputs],
-                                        name=weight_name))
+        weights_list.append(
+            new_weights(shape=[num_inputs, num_outputs], name=weight_name)
+        )
         biases_list.append(new_biases(length=num_outputs, name=bias_name))
 
         if max_out_size is None:

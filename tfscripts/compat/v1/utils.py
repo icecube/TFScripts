@@ -1,6 +1,6 @@
-'''
+"""
 Some utility functions for tfscripts
-'''
+"""
 
 from __future__ import division, print_function
 
@@ -19,7 +19,7 @@ def count_parameters(var_list=None):
     var_list : None, optional
         If a var_list (list of tensors) is given, the number of parameters
         is calculated.
-        If var_list is None, all trainable paramters in the current graph
+        If var_list is None, all trainable parameters in the current graph
         are counted
 
     Returns
@@ -33,7 +33,7 @@ def count_parameters(var_list=None):
 
 
 def get_angle(vec1, vec2, dtype=FLOAT_PRECISION):
-    """ Get the opening angle between two direction vectors.
+    """Get the opening angle between two direction vectors.
 
     vec1/2 : shape: [?,3] or [3]
     https://www.cs.berkeley.edu/~wkahan/Mindless.pdf
@@ -55,10 +55,12 @@ def get_angle(vec1, vec2, dtype=FLOAT_PRECISION):
         Description
     """
 
-    assert vec1.get_shape().as_list()[-1] == 3, \
-        "Expect shape [?,3] or [3], but got {!r}".format(vec1.get_shape())
-    assert vec2.get_shape().as_list()[-1] == 3, \
-        "Expect shape [?,3] or [3], but got {!r}".format(vec2.get_shape())
+    assert (
+        vec1.get_shape().as_list()[-1] == 3
+    ), "Expect shape [?,3] or [3], but got {!r}".format(vec1.get_shape())
+    assert (
+        vec2.get_shape().as_list()[-1] == 3
+    ), "Expect shape [?,3] or [3], but got {!r}".format(vec2.get_shape())
 
     norm1 = tf.norm(tensor=vec1, axis=-1, keepdims=True)
     norm2 = tf.norm(tensor=vec2, axis=-1, keepdims=True)
@@ -68,16 +70,21 @@ def get_angle(vec1, vec2, dtype=FLOAT_PRECISION):
     tmp3 = tf.norm(tensor=tmp1 - tmp2, axis=-1)
     tmp4 = tf.norm(tensor=tmp1 + tmp2, axis=-1)
 
-    theta = 2*tf.atan2(tmp3, tmp4)
+    theta = 2 * tf.atan2(tmp3, tmp4)
     return theta
 
 
-def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
-                             polynomial_order=2,
-                             fill_value=None,
-                             axis=-1,
-                             equidistant_query_points=False,
-                             dtype=FLOAT_PRECISION):
+def polynomial_interpolation(
+    x,
+    x_ref_min,
+    x_ref_max,
+    y_ref,
+    polynomial_order=2,
+    fill_value=None,
+    axis=-1,
+    equidistant_query_points=False,
+    dtype=FLOAT_PRECISION,
+):
     """Performs a 1-dimensional polynomial interpolation of degree 1 or 2
     along the specified axis.
 
@@ -131,8 +138,7 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
     """
     if axis != -1:
         # Transpose if necessary: last axis corresponds to interp points
-        perm = [i for i in range(len(y_ref.get_shape()))
-                if i != axis] + [axis]
+        perm = [i for i in range(len(y_ref.get_shape())) if i != axis] + [axis]
         y_ref = tf.transpose(a=y_ref, perm=perm)
         x = tf.transpose(a=x, perm=perm)
 
@@ -143,15 +149,18 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
 
     # sanity checks to make sure shapes match
     if x_shape[0] != y_shape[0]:
-        assert x_shape[0] is None or y_shape[0] is None, '{!r} != {!r}'.format(
-                                                x_shape[0], y_shape[0])
-    assert x_shape[1:-1] == y_shape[1:-1], '{!r} != {!r}'.format(
-                                                x_shape[:-1], y_shape[:-1])
+        assert x_shape[0] is None or y_shape[0] is None, "{!r} != {!r}".format(
+            x_shape[0], y_shape[0]
+        )
+    assert x_shape[1:-1] == y_shape[1:-1], "{!r} != {!r}".format(
+        x_shape[:-1], y_shape[:-1]
+    )
 
     # We can take advantage of equidistant binning to compute indices
     bin_width = (x_ref_max - x_ref_min) / nbins
-    indices = tf.histogram_fixed_width_bins(x, [x_ref_min, x_ref_max],
-                                            nbins=nbins)
+    indices = tf.histogram_fixed_width_bins(
+        x, [x_ref_min, x_ref_max], nbins=nbins
+    )
 
     lower_boundary = indices < 1
     upper_boundary = indices >= nbins - 1
@@ -168,13 +177,17 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
     if y_shape[0] is None or x_shape[0] is None:
         # Need to obtain y_ref shape dynamically in this case
         index_offset = tf.tile(
-            tf.range(tf.math.reduce_prod(
-                input_tensor=tf.shape(input=y_ref)[:-1])) * nbins,
-            tf.expand_dims(x_shape[-1], axis=-1))
+            tf.range(
+                tf.math.reduce_prod(input_tensor=tf.shape(input=y_ref)[:-1])
+            )
+            * nbins,
+            tf.expand_dims(x_shape[-1], axis=-1),
+        )
         index_offset = tf.reshape(index_offset, [-1] + x_shape[1:])
     else:
-        index_offset = np.tile(np.arange(np.prod(y_shape[:-1])) * nbins,
-                               x_shape[-1])
+        index_offset = np.tile(
+            np.arange(np.prod(y_shape[:-1])) * nbins, x_shape[-1]
+        )
         index_offset = np.reshape(index_offset, x_shape)
 
     y_ref_flat = tf.reshape(y_ref, [-1])
@@ -193,9 +206,9 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
             L_2 = (x - x_0) * (x - x_1) / (2 * bin_width_squared)
 
         else:
-            L_0 = (x - x_1) * (x - x_2) / ((x_0 - x_1)*(x_0 - x_2))
-            L_1 = (x - x_0) * (x - x_2) / ((x_1 - x_0)*(x_1 - x_2))
-            L_2 = (x - x_0) * (x - x_1) / ((x_2 - x_0)*(x_2 - x_1))
+            L_0 = (x - x_1) * (x - x_2) / ((x_0 - x_1) * (x_0 - x_2))
+            L_1 = (x - x_0) * (x - x_2) / ((x_1 - x_0) * (x_1 - x_2))
+            L_2 = (x - x_0) * (x - x_1) / ((x_2 - x_0) * (x_2 - x_1))
 
         result = y_0 * L_0 + y_1 * L_1 + y_2 * L_2
 
@@ -206,22 +219,27 @@ def polynomial_interpolation(x, x_ref_min, x_ref_max, y_ref,
             result = y_1 + (x - x_1) / (x_2 - x_1) * (y_2 - y_1)
 
     else:
-        raise ValueError('Interpolation order {!r} not supported'.format(
-                                                        polynomial_order))
+        raise ValueError(
+            "Interpolation order {!r} not supported".format(polynomial_order)
+        )
 
     if fill_value is None:
-        result = tf.where(lower_boundary,
-                          tf.zeros_like(result)
-                          + tf.expand_dims(y_ref[..., 0], axis=-1),
-                          result)
-        result = tf.where(upper_boundary,
-                          tf.zeros_like(result)
-                          + tf.expand_dims(y_ref[..., -1], axis=-1),
-                          result)
+        result = tf.where(
+            lower_boundary,
+            tf.zeros_like(result) + tf.expand_dims(y_ref[..., 0], axis=-1),
+            result,
+        )
+        result = tf.where(
+            upper_boundary,
+            tf.zeros_like(result) + tf.expand_dims(y_ref[..., -1], axis=-1),
+            result,
+        )
     else:
-        result = tf.where(tf.logical_or(lower_boundary, upper_boundary),
-                          tf.zeros_like(result) + fill_value,
-                          result)
+        result = tf.where(
+            tf.logical_or(lower_boundary, upper_boundary),
+            tf.zeros_like(result) + fill_value,
+            result,
+        )
 
     if axis != -1:
         # Transpose back if necessary

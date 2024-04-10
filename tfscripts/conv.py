@@ -1,4 +1,4 @@
-'''
+"""
 Conv functions for tfscripts:
     convolution helper functions,
     locally connected 1d, 2d, and 3d convolutions [tf.Modules],
@@ -8,7 +8,7 @@ Conv functions for tfscripts:
     stacked convolution 3d and 4d
 
 
-'''
+"""
 
 from __future__ import division, print_function
 
@@ -52,20 +52,20 @@ def conv_output_length(input_length, filter_size, padding, stride, dilation=1):
     """
     if input_length is None:
         return None
-    assert padding in {'SAME', 'VALID'}
+    assert padding in {"SAME", "VALID"}
 
     dilated_filter_size = filter_size + (filter_size - 1) * (dilation - 1)
 
-    if padding == 'SAME':
+    if padding == "SAME":
         output_length = input_length
-    elif padding == 'VALID':
+    elif padding == "VALID":
         output_length = input_length - dilated_filter_size + 1
 
     return (output_length + stride - 1) // stride
 
 
 def get_filter_lr(filter_size):
-    '''
+    """
     Get the number of elements left and right
     of the filter position. If filtersize is
     even, there will be one more element to the
@@ -79,11 +79,11 @@ def get_filter_lr(filter_size):
     Returns
     -------
     (int, int)
-        Number of elemnts left and right
+        Number of elements left and right
         of the filter position.
 
 
-    '''
+    """
     if filter_size % 2 == 1:
         # uneven filter size: same size to left and right
         filter_l = filter_size // 2
@@ -97,7 +97,7 @@ def get_filter_lr(filter_size):
 
 
 def get_start_index(input_length, filter_size, padding, stride, dilation=1):
-    '''
+    """
     Get start index for a convolution along an axis.
     This will be the index of the input axis
     for the first valid convolution position.
@@ -124,7 +124,7 @@ def get_start_index(input_length, filter_size, padding, stride, dilation=1):
     ------
     ValueError
         Description
-    '''
+    """
     filter_l, filter_r = get_filter_lr(filter_size)
 
     # The start index is important for strides and dilation
@@ -132,11 +132,18 @@ def get_start_index(input_length, filter_size, padding, stride, dilation=1):
     # that works and is VALID:
     start_index = 0
     found_valid_position = False
-    if padding == 'VALID':
+    if padding == "VALID":
         for i in range(input_length):
-            if len(range(max(i - dilation*filter_l, 0),
-                         min(i + dilation*filter_r + 1, input_length),
-                         dilation)) == filter_size:
+            if (
+                len(
+                    range(
+                        max(i - dilation * filter_l, 0),
+                        min(i + dilation * filter_r + 1, input_length),
+                        dilation,
+                    )
+                )
+                == filter_size
+            ):
                 # we found the first index that doesn't need padding
                 found_valid_position = True
                 break
@@ -149,7 +156,7 @@ def get_start_index(input_length, filter_size, padding, stride, dilation=1):
 
 
 def get_conv_indices(position, input_length, filter_size, stride, dilation=1):
-    '''
+    """
     Get indices for a convolution patch.
     The indices will correspond to the elements
     being convolved with the filter of size
@@ -173,17 +180,19 @@ def get_conv_indices(position, input_length, filter_size, stride, dilation=1):
     -------
     list of int
         Indices of a convolution patch
-    '''
+    """
     filter_l, filter_r = get_filter_lr(filter_size)
 
-    indices = range(max(position - dilation*filter_l, 0),
-                    min(position + dilation*filter_r + 1, input_length),
-                    dilation)
+    indices = range(
+        max(position - dilation * filter_l, 0),
+        min(position + dilation * filter_r + 1, input_length),
+        dilation,
+    )
     return indices
 
 
 def get_conv_slice(position, input_length, filter_size, stride, dilation=1):
-    '''
+    """
     Get slice for a convolution patch.
     The slice will correspond to the elements
     being convolved with the filter of size
@@ -209,36 +218,37 @@ def get_conv_slice(position, input_length, filter_size, stride, dilation=1):
         slice of input being convolved with the filter
         at 'position'. And number of elements cropped at
         either end, which are needed for padding
-    '''
+    """
     filter_l, filter_r = get_filter_lr(filter_size)
 
-    min_index = position - dilation*filter_l
-    max_index = position + dilation*filter_r + 1
+    min_index = position - dilation * filter_l
+    max_index = position + dilation * filter_r + 1
 
-    conv_slice = slice(max(min_index, 0),
-                       min(max_index, input_length),
-                       dilation)
+    conv_slice = slice(
+        max(min_index, 0), min(max_index, input_length), dilation
+    )
 
-    padding_left = int(np.ceil(max(- min_index, 0) / dilation))
+    padding_left = int(np.ceil(max(-min_index, 0) / dilation))
     padding_right = int(np.ceil(max(max_index - input_length, 0) / dilation))
 
     return conv_slice, (padding_left, padding_right)
 
 
 class LocallyConnected1d(tf.Module):
-    """Like conv1d, but doesn't share weights.
-    """
+    """Like conv1d, but doesn't share weights."""
 
-    def __init__(self,
-                 input_shape,
-                 num_outputs,
-                 filter_size,
-                 kernel=None,
-                 strides= [1],
-                 padding='SAME',
-                 dilation_rate=None,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        num_outputs,
+        filter_size,
+        kernel=None,
+        strides=[1],
+        padding="SAME",
+        dilation_rate=None,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -285,32 +295,35 @@ class LocallyConnected1d(tf.Module):
             input_shape = input_shape.as_list()
 
         # sanity checks
-        msg = 'Filter size must be of shape [x], but is {!r}'
+        msg = "Filter size must be of shape [x], but is {!r}"
         assert len(filter_size) == 1, msg.format(filter_size)
 
-        msg = 'Filter sizes must be greater than 0, but are: {!r}'
+        msg = "Filter sizes must be greater than 0, but are: {!r}"
         assert np.prod(filter_size) > 0, msg.format(filter_size)
 
-        msg = 'Shape is expected to be of length 3, but is {!r}'
+        msg = "Shape is expected to be of length 3, but is {!r}"
         assert len(input_shape) == 3, msg.format(input_shape)
 
         # calculate output shape
         output_shape = np.empty(3, dtype=int)
         for i in range(1):
-            output_shape[i+1] = conv_output_length(
-                                            input_length=input_shape[i + 1],
-                                            filter_size=filter_size[i],
-                                            padding=padding,
-                                            stride=strides[i],
-                                            dilation=dilation_rate[i])
+            output_shape[i + 1] = conv_output_length(
+                input_length=input_shape[i + 1],
+                filter_size=filter_size[i],
+                padding=padding,
+                stride=strides[i],
+                dilation=dilation_rate[i],
+            )
         output_shape[0] = -1
         output_shape[2] = num_outputs
 
         num_inputs = input_shape[2]
 
-        kernel_shape = (np.prod(output_shape[1:-1]),
-                        np.prod(filter_size) * num_inputs,
-                        num_outputs)
+        kernel_shape = (
+            np.prod(output_shape[1:-1]),
+            np.prod(filter_size) * num_inputs,
+            num_outputs,
+        )
 
         # ------------------
         # Create Kernel
@@ -321,13 +334,15 @@ class LocallyConnected1d(tf.Module):
                 kernel = new_locally_connected_weights(
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0],
-                    float_precision=float_precision)
+                    float_precision=float_precision,
+                )
 
             else:
                 kernel = new_locally_connected_weights(
                     shape=kernel_shape,
                     shared_axes=[0],
-                    float_precision=float_precision)
+                    float_precision=float_precision,
+                )
 
         self.output_shape = output_shape
         self.num_outputs = num_outputs
@@ -361,18 +376,24 @@ class LocallyConnected1d(tf.Module):
         # fast shortcut
         if list(self.filter_size) == [1]:
             output = tf.reduce_sum(
-                input_tensor=tf.expand_dims(inputs, axis=3) * self.kernel, axis=2)
+                input_tensor=tf.expand_dims(inputs, axis=3) * self.kernel,
+                axis=2,
+            )
             return output
 
         # ------------------
         # get slices
         # ------------------
-        start_indices = [get_start_index(input_length=input_shape[i + 1],
-                                         filter_size=self.filter_size[i],
-                                         padding=self.padding,
-                                         stride=self.strides[i],
-                                         dilation=self.dilation_rate[i])
-                         for i in range(1)]
+        start_indices = [
+            get_start_index(
+                input_length=input_shape[i + 1],
+                filter_size=self.filter_size[i],
+                padding=self.padding,
+                stride=self.strides[i],
+                dilation=self.dilation_rate[i],
+            )
+            for i in range(1)
+        ]
 
         input_patches = []
         # ---------------------------
@@ -382,13 +403,14 @@ class LocallyConnected1d(tf.Module):
 
             # get slice for patch along x-axis
             slice_x, padding_x = get_conv_slice(
-                                            x,
-                                            input_length=input_shape[1],
-                                            filter_size=self.filter_size[0],
-                                            stride=self.strides[0],
-                                            dilation=self.dilation_rate[0])
+                x,
+                input_length=input_shape[1],
+                filter_size=self.filter_size[0],
+                stride=self.strides[0],
+                dilation=self.dilation_rate[0],
+            )
 
-            if self.padding == 'VALID' and padding_x != (0):
+            if self.padding == "VALID" and padding_x != (0):
                 # skip this x position, since it does not provide
                 # a valid patch for padding 'VALID'
                 continue
@@ -398,19 +420,21 @@ class LocallyConnected1d(tf.Module):
             # ------------------------------------------
             input_patch = inputs[:, slice_x, :]
 
-            if self.padding == 'SAME':
+            if self.padding == "SAME":
                 # pad with zeros
                 paddings = [(0, 0), padding_x, (0, 0)]
                 if paddings != [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]:
-                    input_patch = tf.pad(tensor=input_patch,
-                                         paddings=paddings,
-                                         mode='CONSTANT',
-                                         )
+                    input_patch = tf.pad(
+                        tensor=input_patch,
+                        paddings=paddings,
+                        mode="CONSTANT",
+                    )
 
             # reshape
             input_patch = tf.reshape(
-                    input_patch,
-                    [-1, 1, np.prod(self.filter_size)*self.num_inputs, 1])
+                input_patch,
+                [-1, 1, np.prod(self.filter_size) * self.num_inputs, 1],
+            )
 
             # append to list
             input_patches.append(input_patch)
@@ -429,19 +453,20 @@ class LocallyConnected1d(tf.Module):
 
 
 class LocallyConnected2d(tf.Module):
-    """Like conv2d, but doesn't share weights.
-    """
+    """Like conv2d, but doesn't share weights."""
 
-    def __init__(self,
-                 input_shape,
-                 num_outputs,
-                 filter_size,
-                 kernel=None,
-                 strides=[1, 1],
-                 padding='SAME',
-                 dilation_rate=None,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        num_outputs,
+        filter_size,
+        kernel=None,
+        strides=[1, 1],
+        padding="SAME",
+        dilation_rate=None,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -488,32 +513,35 @@ class LocallyConnected2d(tf.Module):
             input_shape = input_shape.as_list()
 
         # sanity checks
-        msg = 'Filter size must be of shape [x,y], but is {!r}'
+        msg = "Filter size must be of shape [x,y], but is {!r}"
         assert len(filter_size) == 2, msg.format(filter_size)
 
-        msg = 'Filter sizes must be greater than 0, but are: {!r}'
+        msg = "Filter sizes must be greater than 0, but are: {!r}"
         assert np.prod(filter_size) > 0, msg.format(filter_size)
 
-        msg = 'Shape is expected to be of length 4, but is {!r}'
+        msg = "Shape is expected to be of length 4, but is {!r}"
         assert len(input_shape) == 4, msg.format(input_shape)
 
         # calculate output shape
         output_shape = np.empty(4, dtype=int)
         for i in range(2):
-            output_shape[i+1] = conv_output_length(
-                                            input_length=input_shape[i + 1],
-                                            filter_size=filter_size[i],
-                                            padding=padding,
-                                            stride=strides[i],
-                                            dilation=dilation_rate[i])
+            output_shape[i + 1] = conv_output_length(
+                input_length=input_shape[i + 1],
+                filter_size=filter_size[i],
+                padding=padding,
+                stride=strides[i],
+                dilation=dilation_rate[i],
+            )
         output_shape[0] = -1
         output_shape[3] = num_outputs
 
         num_inputs = input_shape[3]
 
-        kernel_shape = (np.prod(output_shape[1:-1]),
-                        np.prod(filter_size) * num_inputs,
-                        num_outputs)
+        kernel_shape = (
+            np.prod(output_shape[1:-1]),
+            np.prod(filter_size) * num_inputs,
+            num_outputs,
+        )
 
         # ------------------
         # Create Kernel
@@ -524,13 +552,15 @@ class LocallyConnected2d(tf.Module):
                 kernel = new_locally_connected_weights(
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0, 1],
-                    float_precision=float_precision)
+                    float_precision=float_precision,
+                )
 
             else:
                 kernel = new_locally_connected_weights(
                     shape=kernel_shape,
                     shared_axes=[0],
-                    float_precision=float_precision)
+                    float_precision=float_precision,
+                )
 
         self.output_shape = output_shape
         self.num_outputs = num_outputs
@@ -565,18 +595,23 @@ class LocallyConnected2d(tf.Module):
         if list(self.filter_size) == [1, 1]:
             output = tf.reduce_sum(
                 input_tensor=tf.expand_dims(inputs, axis=4) * self.kernel,
-                axis=3)
+                axis=3,
+            )
             return output
 
         # ------------------
         # get slices
         # ------------------
-        start_indices = [get_start_index(input_length=input_shape[i + 1],
-                                         filter_size=self.filter_size[i],
-                                         padding=self.padding,
-                                         stride=self.strides[i],
-                                         dilation=self.dilation_rate[i])
-                         for i in range(2)]
+        start_indices = [
+            get_start_index(
+                input_length=input_shape[i + 1],
+                filter_size=self.filter_size[i],
+                padding=self.padding,
+                stride=self.strides[i],
+                dilation=self.dilation_rate[i],
+            )
+            for i in range(2)
+        ]
 
         input_patches = []
         # ---------------------------
@@ -586,13 +621,14 @@ class LocallyConnected2d(tf.Module):
 
             # get slice for patch along x-axis
             slice_x, padding_x = get_conv_slice(
-                                            x,
-                                            input_length=input_shape[1],
-                                            filter_size=self.filter_size[0],
-                                            stride=self.strides[0],
-                                            dilation=self.dilation_rate[0])
+                x,
+                input_length=input_shape[1],
+                filter_size=self.filter_size[0],
+                stride=self.strides[0],
+                dilation=self.dilation_rate[0],
+            )
 
-            if self.padding == 'VALID' and padding_x != (0, 0):
+            if self.padding == "VALID" and padding_x != (0, 0):
                 # skip this x position, since it does not provide
                 # a valid patch for padding 'VALID'
                 continue
@@ -604,19 +640,20 @@ class LocallyConnected2d(tf.Module):
 
                 # get indices for patch along y-axis
                 slice_y, padding_y = get_conv_slice(
-                                            y,
-                                            input_length=input_shape[2],
-                                            filter_size=self.filter_size[1],
-                                            stride=self.strides[1],
-                                            dilation=self.dilation_rate[1])
+                    y,
+                    input_length=input_shape[2],
+                    filter_size=self.filter_size[1],
+                    stride=self.strides[1],
+                    dilation=self.dilation_rate[1],
+                )
 
-                if self.padding == 'VALID' and padding_y != (0, 0):
+                if self.padding == "VALID" and padding_y != (0, 0):
                     # skip this y position, since it does not provide
                     # a valid patch for padding 'VALID'
                     continue
 
                 # At this point, slice_x/y either correspond
-                # to a vaild patch, or padding is 'SAME'
+                # to a valid patch, or padding is 'SAME'
                 # Now we need to pick slice and add it to
                 # input patches. These will later be convolved
                 # with the kernel.
@@ -626,19 +663,21 @@ class LocallyConnected2d(tf.Module):
                 # ------------------------------------------
                 input_patch = inputs[:, slice_x, slice_y, :]
 
-                if self.padding == 'SAME':
+                if self.padding == "SAME":
                     # pad with zeros
                     paddings = [(0, 0), padding_x, padding_y, (0, 0)]
                     if paddings != [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]:
-                        input_patch = tf.pad(tensor=input_patch,
-                                             paddings=paddings,
-                                             mode='CONSTANT',
-                                             )
+                        input_patch = tf.pad(
+                            tensor=input_patch,
+                            paddings=paddings,
+                            mode="CONSTANT",
+                        )
 
                 # reshape
                 input_patch = tf.reshape(
-                        input_patch,
-                        [-1, 1, np.prod(self.filter_size)*self.num_inputs, 1])
+                    input_patch,
+                    [-1, 1, np.prod(self.filter_size) * self.num_inputs, 1],
+                )
 
                 # append to list
                 input_patches.append(input_patch)
@@ -657,19 +696,20 @@ class LocallyConnected2d(tf.Module):
 
 
 class LocallyConnected3d(tf.Module):
-    """Like conv3d, but doesn't share weights.
-    """
+    """Like conv3d, but doesn't share weights."""
 
-    def __init__(self,
-                 input_shape,
-                 num_outputs,
-                 filter_size,
-                 kernel=None,
-                 strides=[1, 1, 1],
-                 padding='SAME',
-                 dilation_rate=None,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        num_outputs,
+        filter_size,
+        kernel=None,
+        strides=[1, 1, 1],
+        padding="SAME",
+        dilation_rate=None,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -708,32 +748,35 @@ class LocallyConnected3d(tf.Module):
             input_shape = input_shape.as_list()
 
         # sanity checks
-        msg = 'Filter size must be of shape [x,y,z], but is {!r}'
+        msg = "Filter size must be of shape [x,y,z], but is {!r}"
         assert len(filter_size) == 3, msg.format(filter_size)
 
-        msg = 'Filter sizes must be greater than 0, but are: {!r}'
+        msg = "Filter sizes must be greater than 0, but are: {!r}"
         assert np.prod(filter_size) > 0, msg.format(filter_size)
 
-        msg = 'Shape is expected to be of length 5, but is {!r}'
+        msg = "Shape is expected to be of length 5, but is {!r}"
         assert len(input_shape) == 5, msg.format(input_shape)
 
         # calculate output shape
         output_shape = np.empty(5, dtype=int)
         for i in range(3):
-            output_shape[i+1] = conv_output_length(
-                                            input_length=input_shape[i + 1],
-                                            filter_size=filter_size[i],
-                                            padding=padding,
-                                            stride=strides[i],
-                                            dilation=dilation_rate[i])
+            output_shape[i + 1] = conv_output_length(
+                input_length=input_shape[i + 1],
+                filter_size=filter_size[i],
+                padding=padding,
+                stride=strides[i],
+                dilation=dilation_rate[i],
+            )
         output_shape[0] = -1
         output_shape[4] = num_outputs
 
         num_inputs = input_shape[4]
 
-        kernel_shape = (np.prod(output_shape[1:-1]),
-                        np.prod(filter_size) * num_inputs,
-                        num_outputs)
+        kernel_shape = (
+            np.prod(output_shape[1:-1]),
+            np.prod(filter_size) * num_inputs,
+            num_outputs,
+        )
 
         # ------------------
         # Create Kernel
@@ -744,13 +787,15 @@ class LocallyConnected3d(tf.Module):
                 kernel = new_locally_connected_weights(
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0, 1, 2],
-                    float_precision=float_precision)
+                    float_precision=float_precision,
+                )
 
             else:
                 kernel = new_locally_connected_weights(
                     shape=kernel_shape,
                     shared_axes=[0],
-                    float_precision=float_precision)
+                    float_precision=float_precision,
+                )
 
         self.output_shape = output_shape
         self.num_outputs = num_outputs
@@ -784,18 +829,24 @@ class LocallyConnected3d(tf.Module):
         # fast shortcut
         if list(self.filter_size) == [1, 1, 1]:
             output = tf.reduce_sum(
-                input_tensor=tf.expand_dims(inputs, axis=5) * self.kernel, axis=4)
+                input_tensor=tf.expand_dims(inputs, axis=5) * self.kernel,
+                axis=4,
+            )
             return output
 
         # ------------------
         # get slices
         # ------------------
-        start_indices = [get_start_index(input_length=input_shape[i + 1],
-                                         filter_size=self.filter_size[i],
-                                         padding=self.padding,
-                                         stride=self.strides[i],
-                                         dilation=self.dilation_rate[i])
-                         for i in range(3)]
+        start_indices = [
+            get_start_index(
+                input_length=input_shape[i + 1],
+                filter_size=self.filter_size[i],
+                padding=self.padding,
+                stride=self.strides[i],
+                dilation=self.dilation_rate[i],
+            )
+            for i in range(3)
+        ]
 
         input_patches = []
         # ---------------------------
@@ -805,13 +856,14 @@ class LocallyConnected3d(tf.Module):
 
             # get slice for patch along x-axis
             slice_x, padding_x = get_conv_slice(
-                                            x,
-                                            input_length=input_shape[1],
-                                            filter_size=self.filter_size[0],
-                                            stride=self.strides[0],
-                                            dilation=self.dilation_rate[0])
+                x,
+                input_length=input_shape[1],
+                filter_size=self.filter_size[0],
+                stride=self.strides[0],
+                dilation=self.dilation_rate[0],
+            )
 
-            if self.padding == 'VALID' and padding_x != (0, 0):
+            if self.padding == "VALID" and padding_x != (0, 0):
                 # skip this x position, since it does not provide
                 # a valid patch for padding 'VALID'
                 continue
@@ -823,13 +875,14 @@ class LocallyConnected3d(tf.Module):
 
                 # get indices for patch along y-axis
                 slice_y, padding_y = get_conv_slice(
-                                            y,
-                                            input_length=input_shape[2],
-                                            filter_size=self.filter_size[1],
-                                            stride=self.strides[1],
-                                            dilation=self.dilation_rate[1])
+                    y,
+                    input_length=input_shape[2],
+                    filter_size=self.filter_size[1],
+                    stride=self.strides[1],
+                    dilation=self.dilation_rate[1],
+                )
 
-                if self.padding == 'VALID' and padding_y != (0, 0):
+                if self.padding == "VALID" and padding_y != (0, 0):
                     # skip this y position, since it does not provide
                     # a valid patch for padding 'VALID'
                     continue
@@ -837,24 +890,26 @@ class LocallyConnected3d(tf.Module):
                 # ---------------------------
                 # loop over all z positions
                 # ---------------------------
-                for z in range(start_indices[2], input_shape[3],
-                               self.strides[2]):
+                for z in range(
+                    start_indices[2], input_shape[3], self.strides[2]
+                ):
 
                     # get indices for patch along y-axis
                     slice_z, padding_z = get_conv_slice(
-                                            z,
-                                            input_length=input_shape[3],
-                                            filter_size=self.filter_size[2],
-                                            stride=self.strides[2],
-                                            dilation=self.dilation_rate[2])
+                        z,
+                        input_length=input_shape[3],
+                        filter_size=self.filter_size[2],
+                        stride=self.strides[2],
+                        dilation=self.dilation_rate[2],
+                    )
 
-                    if self.padding == 'VALID' and padding_z != (0, 0):
+                    if self.padding == "VALID" and padding_z != (0, 0):
                         # skip this z position, since it does not provide
                         # a valid patch for padding 'VALID'
                         continue
 
                     # At this point, slice_x/y/z either correspond
-                    # to a vaild patch, or padding is 'SAME'
+                    # to a valid patch, or padding is 'SAME'
                     # Now we need to pick slice and add it to
                     # input patches. These will later be convolved
                     # with the kernel.
@@ -864,21 +919,38 @@ class LocallyConnected3d(tf.Module):
                     # ------------------------------------------
                     input_patch = inputs[:, slice_x, slice_y, slice_z, :]
 
-                    if self.padding == 'SAME':
+                    if self.padding == "SAME":
                         # pad with zeros
-                        paddings = [(0, 0), padding_x, padding_y,
-                                    padding_z, (0, 0)]
-                        if paddings != [(0, 0), (0, 0), (0, 0),
-                                        (0, 0), (0, 0)]:
-                            input_patch = tf.pad(tensor=input_patch,
-                                                 paddings=paddings,
-                                                 mode='CONSTANT',
-                                                 )
+                        paddings = [
+                            (0, 0),
+                            padding_x,
+                            padding_y,
+                            padding_z,
+                            (0, 0),
+                        ]
+                        if paddings != [
+                            (0, 0),
+                            (0, 0),
+                            (0, 0),
+                            (0, 0),
+                            (0, 0),
+                        ]:
+                            input_patch = tf.pad(
+                                tensor=input_patch,
+                                paddings=paddings,
+                                mode="CONSTANT",
+                            )
 
                     # reshape
                     input_patch = tf.reshape(
                         input_patch,
-                        [-1, 1, np.prod(self.filter_size)*self.num_inputs, 1])
+                        [
+                            -1,
+                            1,
+                            np.prod(self.filter_size) * self.num_inputs,
+                            1,
+                        ],
+                    )
 
                     # append to list
                     input_patches.append(input_patch)
@@ -896,22 +968,23 @@ class LocallyConnected3d(tf.Module):
         return output
 
 
-def local_translational3d_trafo(input,
-                                num_outputs,
-                                filter_size,
-                                fcn=None,
-                                weights=None,
-                                strides=[1, 1, 1],
-                                padding='SAME',
-                                dilation_rate=None,
-                                is_training=True,
-                                ):
-    '''
+def local_translational3d_trafo(
+    input,
+    num_outputs,
+    filter_size,
+    fcn=None,
+    weights=None,
+    strides=[1, 1, 1],
+    padding="SAME",
+    dilation_rate=None,
+    is_training=True,
+):
+    """
     Applies a transformation defined by the callable fcn(input_patch)
     to the input_patch. Returns the output of fcn.
-    Similiar to conv3d, but instead of a convolution, the transformation
+    Similar to conv3d, but instead of a convolution, the transformation
     defined by fcn is performed. The transformation is learnable and shared
-    accross input_patches similar to how the convolutional kernel is sahred.
+    across input_patches similar to how the convolutional kernel is sahred.
 
     Parameters
     ----------
@@ -952,7 +1025,7 @@ def local_translational3d_trafo(input,
     -------
     2 Tensors: result and kernels.
     Have the same type as input.
-    '''
+    """
 
     if dilation_rate is None:
         dilation_rate = [1, 1, 1]
@@ -963,34 +1036,38 @@ def local_translational3d_trafo(input,
     input_shape = input.get_shape().as_list()
 
     # sanity checks
-    msg = 'Filter size must be of shape [x,y,z], but is {!r}'
+    msg = "Filter size must be of shape [x,y,z], but is {!r}"
     assert len(filter_size) == 3, msg.format(filter_size)
-    assert np.prod(filter_size) > 0, 'Filter sizes must be greater than 0'
-    msg = 'Shape is expected to be of length 5, but is {!r}'
+    assert np.prod(filter_size) > 0, "Filter sizes must be greater than 0"
+    msg = "Shape is expected to be of length 5, but is {!r}"
     assert len(input_shape) == 5, msg.format(input_shape)
 
     # calculate output shape
     output_shape = np.empty(5, dtype=int)
     for i in range(3):
-        output_shape[i+1] = conv_output_length(input_length=input_shape[i + 1],
-                                               filter_size=filter_size[i],
-                                               padding=padding,
-                                               stride=strides[i],
-                                               dilation=dilation_rate[i])
+        output_shape[i + 1] = conv_output_length(
+            input_length=input_shape[i + 1],
+            filter_size=filter_size[i],
+            padding=padding,
+            stride=strides[i],
+            dilation=dilation_rate[i],
+        )
     output_shape[0] = -1
     output_shape[4] = num_outputs
-
-    num_inputs = input_shape[4]
 
     # ------------------
     # get slices
     # ------------------
-    start_indices = [get_start_index(input_length=input_shape[i + 1],
-                                     filter_size=filter_size[i],
-                                     padding=padding,
-                                     stride=strides[i],
-                                     dilation=dilation_rate[i])
-                     for i in range(3)]
+    start_indices = [
+        get_start_index(
+            input_length=input_shape[i + 1],
+            filter_size=filter_size[i],
+            padding=padding,
+            stride=strides[i],
+            dilation=dilation_rate[i],
+        )
+        for i in range(3)
+    ]
 
     output = []
     # ---------------------------
@@ -999,13 +1076,15 @@ def local_translational3d_trafo(input,
     for x in range(start_indices[0], input_shape[1], strides[0]):
 
         # get slice for patch along x-axis
-        slice_x, padding_x = get_conv_slice(x,
-                                            input_length=input_shape[1],
-                                            filter_size=filter_size[0],
-                                            stride=strides[0],
-                                            dilation=dilation_rate[0])
+        slice_x, padding_x = get_conv_slice(
+            x,
+            input_length=input_shape[1],
+            filter_size=filter_size[0],
+            stride=strides[0],
+            dilation=dilation_rate[0],
+        )
 
-        if padding == 'VALID' and padding_x != (0, 0):
+        if padding == "VALID" and padding_x != (0, 0):
             # skip this x position, since it does not provide
             # a valid patch for padding 'VALID'
             continue
@@ -1016,13 +1095,15 @@ def local_translational3d_trafo(input,
         for y in range(start_indices[1], input_shape[2], strides[1]):
 
             # get indices for patch along y-axis
-            slice_y, padding_y = get_conv_slice(y,
-                                                input_length=input_shape[2],
-                                                filter_size=filter_size[1],
-                                                stride=strides[1],
-                                                dilation=dilation_rate[1])
+            slice_y, padding_y = get_conv_slice(
+                y,
+                input_length=input_shape[2],
+                filter_size=filter_size[1],
+                stride=strides[1],
+                dilation=dilation_rate[1],
+            )
 
-            if padding == 'VALID' and padding_y != (0, 0):
+            if padding == "VALID" and padding_y != (0, 0):
                 # skip this y position, since it does not provide
                 # a valid patch for padding 'VALID'
                 continue
@@ -1034,19 +1115,20 @@ def local_translational3d_trafo(input,
 
                 # get indices for patch along y-axis
                 slice_z, padding_z = get_conv_slice(
-                                        z,
-                                        input_length=input_shape[3],
-                                        filter_size=filter_size[2],
-                                        stride=strides[2],
-                                        dilation=dilation_rate[2])
+                    z,
+                    input_length=input_shape[3],
+                    filter_size=filter_size[2],
+                    stride=strides[2],
+                    dilation=dilation_rate[2],
+                )
 
-                if padding == 'VALID' and padding_z != (0, 0):
+                if padding == "VALID" and padding_z != (0, 0):
                     # skip this z position, since it does not provide
                     # a valid patch for padding 'VALID'
                     continue
 
                 # At this point, slice_x/y/z either correspond
-                # to a vaild patch, or padding is 'SAME'
+                # to a valid patch, or padding is 'SAME'
                 # Now we need to pick slice and add it to
                 # input patches. These will later be convolved
                 # with the kernel.
@@ -1055,18 +1137,24 @@ def local_translational3d_trafo(input,
                 # Get input patch at filter position x,y,z
                 # ------------------------------------------
                 # input_patch = tf.expand_dims(
-                #                inputs[:, slice_x, slice_y, slice_z, :], 5)
-                input_patch = inputs[:, slice_x, slice_y, slice_z, :]
+                #                input[:, slice_x, slice_y, slice_z, :], 5)
+                input_patch = input[:, slice_x, slice_y, slice_z, :]
 
-                if padding == 'SAME':
+                if padding == "SAME":
                     # pad with zeros
-                    paddings = [(0, 0), padding_x, padding_y,
-                                padding_z, (0, 0)]
+                    paddings = [
+                        (0, 0),
+                        padding_x,
+                        padding_y,
+                        padding_z,
+                        (0, 0),
+                    ]
                     if paddings != [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]:
-                        input_patch = tf.pad(tensor=input_patch,
-                                             paddings=paddings,
-                                             mode='CONSTANT',
-                                             )
+                        input_patch = tf.pad(
+                            tensor=input_patch,
+                            paddings=paddings,
+                            mode="CONSTANT",
+                        )
 
                 # ------------------------------
                 # Perform trafo on input_patch
@@ -1077,7 +1165,8 @@ def local_translational3d_trafo(input,
                     output_patch = tf.reduce_sum(
                         input_tensor=expanded_input * weights,
                         axis=[1, 2, 3, 4],
-                        keepdims=False)
+                        keepdims=False,
+                    )
                 elif fcn is not None:
                     output_patch = fcn(input_patch)
 
@@ -1093,14 +1182,14 @@ def local_translational3d_trafo(input,
 
 
 def dynamic_conv(
-                inputs,
-                filters,
-                batch_size=None,
-                strides=[1, 1, 1],
-                padding='SAME',
-                dilation_rate=None,
-                ):
-    '''
+    inputs,
+    filters,
+    batch_size=None,
+    strides=[1, 1, 1],
+    padding="SAME",
+    dilation_rate=None,
+):
+    """
     Equivalent to tf.nn.convolution, but filter has additional
     batch dimension. This allows the filter to be a function
     of some input, hence, enabling dynamic convolutions.
@@ -1148,7 +1237,7 @@ def dynamic_conv(
     Returns
     -------
     A Tensor. Has the same type as inputs.
-    '''
+    """
 
     input_shape = inputs.get_shape().as_list()
     filter_shape = filters.get_shape().as_list()
@@ -1161,42 +1250,40 @@ def dynamic_conv(
 
         try:
             batch_size = dynamic_conv.BATCH_SIZE
-        except Exception as e:
+        except Exception:
             batch_size = inputs.get_shape().as_list()[0]
 
-    split_inputs = tf.split(inputs,
-                            batch_size,
-                            axis=0)
-    split_filters = tf.unstack(filters,
-                               batch_size,
-                               axis=0)
+    split_inputs = tf.split(inputs, batch_size, axis=0)
+    split_filters = tf.unstack(filters, batch_size, axis=0)
 
     output_list = []
     for split_input, split_filter in zip(split_inputs, split_filters):
         output_list.append(
-              tf.nn.convolution(input=split_input,
-                                filters=split_filter,
-                                strides=strides,
-                                padding=padding,
-                                dilations=dilation_rate,
-                                )
-          )
+            tf.nn.convolution(
+                input=split_input,
+                filters=split_filter,
+                strides=strides,
+                padding=padding,
+                dilations=dilation_rate,
+            )
+        )
     output = tf.concat(output_list, axis=0)
     return output
 
 
-def trans3d_op(input,
-               num_out_channel,
-               filter_size,
-               method,
-               trafo=None,
-               filter=None,
-               strides=[1, 1, 1],
-               padding='SAME',
-               dilation_rate=None,
-               stack_axis=None,
-               ):
-    '''
+def trans3d_op(
+    input,
+    num_out_channel,
+    filter_size,
+    method,
+    trafo=None,
+    filter=None,
+    strides=[1, 1, 1],
+    padding="SAME",
+    dilation_rate=None,
+    stack_axis=None,
+):
+    """
     Applies a transformation to the input_patch. Input patches are obtained
     as it is done in conv3d. The transformation that is performed on this input
     patch is defined by the method argument:
@@ -1284,7 +1371,7 @@ def trans3d_op(input,
         Description
     ValueError
         Description
-    '''
+    """
 
     if dilation_rate is None:
         dilation_rate = [1, 1, 1]
@@ -1295,23 +1382,28 @@ def trans3d_op(input,
     input_shape = input.get_shape().as_list()
 
     # sanity checks
-    if method not in ['dynamic_convolution', 'locally_connected',
-                      'local_trafo']:
-        raise ValueError('Method unknown: {!r}'.format(method))
-    msg = 'Filter size must be of shape [x,y,z], but is {!r}'
+    if method not in [
+        "dynamic_convolution",
+        "locally_connected",
+        "local_trafo",
+    ]:
+        raise ValueError("Method unknown: {!r}".format(method))
+    msg = "Filter size must be of shape [x,y,z], but is {!r}"
     assert len(filter_size) == 3, msg.format(filter_size)
-    assert np.prod(filter_size) > 0, 'Filter sizes must be greater than 0'
-    msg = 'Shape is expected to be of length 5, but is {}'
+    assert np.prod(filter_size) > 0, "Filter sizes must be greater than 0"
+    msg = "Shape is expected to be of length 5, but is {}"
     assert len(input_shape) == 5, msg.format(input_shape)
 
     # calculate output shape
     output_shape = np.empty(5, dtype=int)
     for i in range(3):
-        output_shape[i+1] = conv_output_length(input_length=input_shape[i + 1],
-                                               filter_size=filter_size[i],
-                                               padding=padding,
-                                               stride=strides[i],
-                                               dilation=dilation_rate[i])
+        output_shape[i + 1] = conv_output_length(
+            input_length=input_shape[i + 1],
+            filter_size=filter_size[i],
+            padding=padding,
+            stride=strides[i],
+            dilation=dilation_rate[i],
+        )
     output_shape[0] = -1
     output_shape[4] = num_out_channel
 
@@ -1328,8 +1420,8 @@ def trans3d_op(input,
     # if stack_axis is 2 (z-dimension):
     # [batch, x, y, filter_x, filter_y, num_in_channel]
     s_patches_shape = list(patches_shape)
-    del s_patches_shape[1+stack_axis]
-    del s_patches_shape[3+stack_axis]
+    del s_patches_shape[1 + stack_axis]
+    del s_patches_shape[3 + stack_axis]
 
     # define parameters for extract_image_patches
     ksizes = [1] + list(filter_size) + [1]
@@ -1345,35 +1437,43 @@ def trans3d_op(input,
     # ------------------
     # get slices
     # ------------------
-    start_indices = [get_start_index(input_length=input_shape[i + 1],
-                                     filter_size=filter_size[i],
-                                     padding=padding,
-                                     stride=strides[i],
-                                     dilation=dilation_rate[i])
-                     for i in range(3)]
+    start_indices = [
+        get_start_index(
+            input_length=input_shape[i + 1],
+            filter_size=filter_size[i],
+            padding=padding,
+            stride=strides[i],
+            dilation=dilation_rate[i],
+        )
+        for i in range(3)
+    ]
 
     output = []
     # ---------------------------------------
     # loop over all positions in dim #stack_axis
     # ----------------------------------------
-    for s in range(start_indices[stack_axis], input_shape[stack_axis + 1],
-                   strides[stack_axis]):
+    for s in range(
+        start_indices[stack_axis],
+        input_shape[stack_axis + 1],
+        strides[stack_axis],
+    ):
 
         # get slice for patch along stack_axis
         slice_s, padding_s = get_conv_slice(
-                                s,
-                                input_length=input_shape[stack_axis + 1],
-                                filter_size=filter_size[stack_axis],
-                                stride=strides[stack_axis],
-                                dilation=dilation_rate[stack_axis])
+            s,
+            input_length=input_shape[stack_axis + 1],
+            filter_size=filter_size[stack_axis],
+            stride=strides[stack_axis],
+            dilation=dilation_rate[stack_axis],
+        )
 
-        if padding == 'VALID' and padding_s != (0, 0):
+        if padding == "VALID" and padding_s != (0, 0):
             # skip this axis position, since it does not provide
             # a valid patch for padding 'VALID'
             continue
 
         # At this point, slice_s either corresponds
-        # to a vaild patch, or padding is 'SAME'
+        # to a valid patch, or padding is 'SAME'
         # Now we need to combine the input_patches
 
         # ----------------------------------------------------
@@ -1389,17 +1489,20 @@ def trans3d_op(input,
             # [batch, filter_x, filter_y, in_channel]
             # input_patches has shape:
             # [batch, x,y, filter_x*filter_y*in_channel]
-            input_s_patches = tf.image.extract_patches(input_s,
-                                                       sizes=ksizes,
-                                                       strides=strides2d,
-                                                       rates=rates,
-                                                       padding=padding)
+            input_s_patches = tf.image.extract_patches(
+                input_s,
+                sizes=ksizes,
+                strides=strides2d,
+                rates=rates,
+                padding=padding,
+            )
 
             # reshape input_patches to
             # [batch, x,y, filter_x,filter_y,in_channel]
             # (assuming stack_axis=2)
-            reshaped_input_s_patches = tf.reshape(input_s_patches,
-                                                  shape=s_patches_shape)
+            reshaped_input_s_patches = tf.reshape(
+                input_s_patches, shape=s_patches_shape
+            )
             input_patches.append(reshaped_input_s_patches)
 
         # input_patches almost has correct shape:
@@ -1408,8 +1511,10 @@ def trans3d_op(input,
         # However, padding must still be applied
 
         # Pad input_patches along stack_axis dimension
-        if padding == 'SAME' and method in ['locally_connected',
-                                            'local_trafo']:
+        if padding == "SAME" and method in [
+            "locally_connected",
+            "local_trafo",
+        ]:
             if padding_s != (0, 0):
                 zeros = tf.zeros_like(input_patches[0])
 
@@ -1432,32 +1537,34 @@ def trans3d_op(input,
         # ------------------------------
         # Perform dynamic convolution
         # ------------------------------
-        if method == 'dynamic_convolution':
+        if method == "dynamic_convolution":
             # filter has shape
             # [filter_x, filter_y, filter_z, in_channels, out_channels]
             # Dimensions need to match:
             expanded_input_patches = tf.expand_dims(input_patches, -1)
-            begin = [0]*5
-            size = [-1]*5
+            begin = [0] * 5
+            size = [-1] * 5
             begin[stack_axis] = padding_s[0]
-            size[stack_axis] = (filter_size[stack_axis] - padding_s[1]
-                                - padding_s[0])
+            size[stack_axis] = (
+                filter_size[stack_axis] - padding_s[1] - padding_s[0]
+            )
             sliced_filter = tf.slice(filter, begin, size)
             output_patch = tf.reduce_sum(
-                        input_tensor=expanded_input_patches * sliced_filter,
-                        axis=[3, 4, 5, 6],
-                        keepdims=False)
+                input_tensor=expanded_input_patches * sliced_filter,
+                axis=[3, 4, 5, 6],
+                keepdims=False,
+            )
             output.append(output_patch)
         # ------------------------------
         # Locally connected
         # ------------------------------
-        elif method == 'locally_connected':
+        elif method == "locally_connected":
             raise NotImplementedError()
 
         # ------------------------------
         # Perform trafo on input_patch
         # ------------------------------
-        elif method == 'local_trafo':
+        elif method == "local_trafo":
 
             output_patch = trafo(input_patches)
             output.append(output_patch)
@@ -1469,8 +1576,8 @@ def trans3d_op(input,
     return output
 
 
-def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
-    '''
+def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding="SAME"):
+    """
     Equivalent to tensorflows conv3d.
     This method is slightly slower, but appears to use less vram.
 
@@ -1504,7 +1611,7 @@ def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
     Returns
     -------
     A Tensor. Has the same type as input.
-    '''
+    """
 
     # unpack along z dimension
     tensors_z = tf.unstack(input, axis=3)
@@ -1515,21 +1622,28 @@ def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
 
     if len_zs % 2 == 1:
         # uneven filter size: same size to left and right
-        filter_l = int(len_zs/2)
-        filter_r = int(len_zs/2)
+        filter_l = int(len_zs / 2)
+        filter_r = int(len_zs / 2)
     else:
         # even filter size: one more to right
-        filter_l = int(len_zs/2) - 1
-        filter_r = int(len_zs/2)
+        filter_l = int(len_zs / 2) - 1
+        filter_r = int(len_zs / 2)
 
     # The start index is important for strides
     # The strides start with the first element
     # that works and is VALID:
     start_index = 0
-    if padding == 'VALID':
+    if padding == "VALID":
         for i in range(size_of_z_dim):
-            if len(range(max(i - filter_l, 0),
-                         min(i + filter_r+1, size_of_z_dim))) == len_zs:
+            if (
+                len(
+                    range(
+                        max(i - filter_l, 0),
+                        min(i + filter_r + 1, size_of_z_dim),
+                    )
+                )
+                == len_zs
+            ):
                 # we found the first index that doesn't need padding
                 break
         start_index = i
@@ -1538,10 +1652,11 @@ def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
     result_z = []
     for i in range(start_index, size_of_z_dim, strides[3]):
 
-        if padding == 'VALID':
+        if padding == "VALID":
             # Get indices z_s
-            indices_z_s = range(max(i - filter_l, 0),
-                                min(i + filter_r+1, size_of_z_dim))
+            indices_z_s = range(
+                max(i - filter_l, 0), min(i + filter_r + 1, size_of_z_dim)
+            )
 
             # check if Padding = 'VALID'
             if len(indices_z_s) == len_zs:
@@ -1550,30 +1665,35 @@ def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
                 # sum over all remaining index_z_i in indices_z_s
                 for j, index_z_i in enumerate(indices_z_s):
                     tensors_z_convoluted.append(
-                                tf.nn.conv2d(input=tensors_z[index_z_i],
-                                             filters=kernel_z[j],
-                                             strides=strides[:3]+strides[4:],
-                                             padding=padding)
-                                )
+                        tf.nn.conv2d(
+                            input=tensors_z[index_z_i],
+                            filters=kernel_z[j],
+                            strides=strides[:3] + strides[4:],
+                            padding=padding,
+                        )
+                    )
                 sum_tensors_z_s = tf.add_n(tensors_z_convoluted)
 
                 # put together
                 result_z.append(sum_tensors_z_s)
 
-        elif padding == 'SAME':
+        elif padding == "SAME":
             tensors_z_convoluted = []
-            for kernel_j, j in enumerate(range(i - filter_l,
-                                               (i + 1) + filter_r)):
+            for kernel_j, j in enumerate(
+                range(i - filter_l, (i + 1) + filter_r)
+            ):
                 # we can just leave out the invalid z coordinates
-                # since they will be padded with 0's and therfore
+                # since they will be padded with 0's and therefore
                 # don't contribute to the sum
                 if 0 <= j < size_of_z_dim:
                     tensors_z_convoluted.append(
-                                tf.nn.conv2d(input=tensors_z[j],
-                                             filters=kernel_z[kernel_j],
-                                             strides=strides[:3]+strides[4:],
-                                             padding=padding)
-                                )
+                        tf.nn.conv2d(
+                            input=tensors_z[j],
+                            filters=kernel_z[kernel_j],
+                            strides=strides[:3] + strides[4:],
+                            padding=padding,
+                        )
+                    )
             sum_tensors_z_s = tf.add_n(tensors_z_convoluted)
             # put together
             result_z.append(sum_tensors_z_s)
@@ -1582,14 +1702,16 @@ def conv3d_stacked(input, filter, strides=[1, 1, 1, 1, 1], padding='SAME'):
     return tf.stack(result_z, axis=3)
 
 
-def conv4d_stacked(input, filter,
-                   strides=[1, 1, 1, 1, 1, 1],
-                   padding='SAME',
-                   dilation_rate=None,
-                   stack_axis=None,
-                   stack_nested=False,
-                   ):
-    '''
+def conv4d_stacked(
+    input,
+    filter,
+    strides=[1, 1, 1, 1, 1, 1],
+    padding="SAME",
+    dilation_rate=None,
+    stack_axis=None,
+    stack_nested=False,
+):
+    """
     Computes a convolution over 4 dimensions.
     Python generalization of tensorflow's conv3d with dilation.
     conv4d_stacked uses tensorflows conv3d and stacks results along
@@ -1621,14 +1743,14 @@ def conv4d_stacked(input, filter,
           chosen. This is only an educated guess of the best choice!
 
     stack_nested : Bool
-        If set to True, this will stack in a for loop seperately and afterwards
+        If set to True, this will stack in a for loop separately and afterwards
         combine the results.
         In most cases slower, but maybe less memory needed.
 
     Returns
     -------
     A Tensor. Has the same type as input.
-    '''
+    """
 
     # heuristically choose stack_axis
     if stack_axis is None:
@@ -1636,43 +1758,53 @@ def conv4d_stacked(input, filter,
             dil_array = np.ones(4)
         else:
             dil_array = np.asarray(dilation_rate)
-        outputsizes = (np.asarray(input.get_shape().as_list()[1:5]) /
-                       np.asarray(strides[1:5]))
-        outputsizes -= dil_array*(
-                            np.asarray(filter.get_shape().as_list()[:4])-1)
-        stack_axis = np.argmin(outputsizes)+1
+        outputsizes = np.asarray(
+            input.get_shape().as_list()[1:5]
+        ) / np.asarray(strides[1:5])
+        outputsizes -= dil_array * (
+            np.asarray(filter.get_shape().as_list()[:4]) - 1
+        )
+        stack_axis = np.argmin(outputsizes) + 1
 
     if dilation_rate is not None:
-        dilation_along_stack_axis = dilation_rate[stack_axis-1]
+        dilation_along_stack_axis = dilation_rate[stack_axis - 1]
     else:
         dilation_along_stack_axis = 1
 
     tensors_t = tf.unstack(input, axis=stack_axis)
-    kernel_t = tf.unstack(filter, axis=stack_axis-1)
+    kernel_t = tf.unstack(filter, axis=stack_axis - 1)
 
-    noOfInChannels = input.get_shape().as_list()[-1]
-    len_ts = filter.get_shape().as_list()[stack_axis-1]
+    len_ts = filter.get_shape().as_list()[stack_axis - 1]
     size_of_t_dim = input.get_shape().as_list()[stack_axis]
 
     if len_ts % 2 == 1:
         # uneven filter size: same size to left and right
-        filter_l = int(len_ts/2)
-        filter_r = int(len_ts/2)
+        filter_l = int(len_ts / 2)
+        filter_r = int(len_ts / 2)
     else:
         # even filter size: one more to right
-        filter_l = int(len_ts/2) - 1
-        filter_r = int(len_ts/2)
+        filter_l = int(len_ts / 2) - 1
+        filter_r = int(len_ts / 2)
 
     # The start index is important for strides and dilation
     # The strides start with the first element
     # that works and is VALID:
     start_index = 0
-    if padding == 'VALID':
+    if padding == "VALID":
         for i in range(size_of_t_dim):
-            if len(range(max(i - dilation_along_stack_axis*filter_l, 0),
-                         min(i + dilation_along_stack_axis*filter_r+1,
-                             size_of_t_dim),
-                         dilation_along_stack_axis)) == len_ts:
+            if (
+                len(
+                    range(
+                        max(i - dilation_along_stack_axis * filter_l, 0),
+                        min(
+                            i + dilation_along_stack_axis * filter_r + 1,
+                            size_of_t_dim,
+                        ),
+                        dilation_along_stack_axis,
+                    )
+                )
+                == len_ts
+            ):
                 # we found the first index that doesn't need padding
                 break
         start_index = i
@@ -1685,13 +1817,16 @@ def conv4d_stacked(input, filter,
         input_patch = []
         tensors_t_convoluted = []
 
-        if padding == 'VALID':
+        if padding == "VALID":
 
             # Get indices t_s
-            indices_t_s = range(max(i - dilation_along_stack_axis*filter_l, 0),
-                                min(i + dilation_along_stack_axis*filter_r+1,
-                                    size_of_t_dim),
-                                dilation_along_stack_axis)
+            indices_t_s = range(
+                max(i - dilation_along_stack_axis * filter_l, 0),
+                min(
+                    i + dilation_along_stack_axis * filter_r + 1, size_of_t_dim
+                ),
+                dilation_along_stack_axis,
+            )
 
             # check if Padding = 'VALID'
             if len(indices_t_s) == len_ts:
@@ -1707,36 +1842,46 @@ def conv4d_stacked(input, filter,
                                 tf.nn.convolution(
                                     input=tensors_t[index_t_i],
                                     filters=kernel_t[j],
-                                    strides=(strides[1:stack_axis+1]
-                                             + strides[stack_axis:5]),
+                                    strides=(
+                                        strides[1 : stack_axis + 1]
+                                        + strides[stack_axis:5]
+                                    ),
                                     padding=padding,
                                     dilations=(
-                                            dilation_rate[:stack_axis-1]
-                                            + dilation_rate[stack_axis:]))
+                                        dilation_rate[: stack_axis - 1]
+                                        + dilation_rate[stack_axis:]
+                                    ),
                                 )
+                            )
                         else:
                             tensors_t_convoluted.append(
-                                tf.nn.conv3d(input=tensors_t[index_t_i],
-                                             filters=kernel_t[j],
-                                             strides=(strides[:stack_axis] +
-                                                      strides[stack_axis+1:]),
-                                             padding=padding)
+                                tf.nn.conv3d(
+                                    input=tensors_t[index_t_i],
+                                    filters=kernel_t[j],
+                                    strides=(
+                                        strides[:stack_axis]
+                                        + strides[stack_axis + 1 :]
+                                    ),
+                                    padding=padding,
                                 )
+                            )
                 if stack_nested:
                     sum_tensors_t_s = tf.add_n(tensors_t_convoluted)
                     # put together
                     result_t.append(sum_tensors_t_s)
 
-        elif padding == 'SAME':
+        elif padding == "SAME":
 
             # Get indices t_s
-            indices_t_s = range(i - dilation_along_stack_axis*filter_l,
-                                (i + 1) + dilation_along_stack_axis*filter_r,
-                                dilation_along_stack_axis)
+            indices_t_s = range(
+                i - dilation_along_stack_axis * filter_l,
+                (i + 1) + dilation_along_stack_axis * filter_r,
+                dilation_along_stack_axis,
+            )
 
             for kernel_j, j in enumerate(indices_t_s):
                 # we can just leave out the invalid t coordinates
-                # since they will be padded with 0's and therfore
+                # since they will be padded with 0's and therefore
                 # don't contribute to the sum
 
                 if 0 <= j < size_of_t_dim:
@@ -1749,21 +1894,29 @@ def conv4d_stacked(input, filter,
                                 tf.nn.convolution(
                                     input=tensors_t[j],
                                     filters=kernel_t[kernel_j],
-                                    strides=(strides[1:stack_axis+1] +
-                                             strides[stack_axis:5]),
+                                    strides=(
+                                        strides[1 : stack_axis + 1]
+                                        + strides[stack_axis:5]
+                                    ),
                                     padding=padding,
                                     dilations=(
-                                        dilation_rate[:stack_axis-1] +
-                                        dilation_rate[stack_axis:]))
+                                        dilation_rate[: stack_axis - 1]
+                                        + dilation_rate[stack_axis:]
+                                    ),
                                 )
+                            )
                         else:
                             tensors_t_convoluted.append(
-                                tf.nn.conv3d(input=tensors_t[j],
-                                             filters=kernel_t[kernel_j],
-                                             strides=(strides[:stack_axis] +
-                                                      strides[stack_axis+1:]),
-                                             padding=padding)
-                                        )
+                                tf.nn.conv3d(
+                                    input=tensors_t[j],
+                                    filters=kernel_t[kernel_j],
+                                    strides=(
+                                        strides[:stack_axis]
+                                        + strides[stack_axis + 1 :]
+                                    ),
+                                    padding=padding,
+                                )
+                            )
             if stack_nested:
                 sum_tensors_t_s = tf.add_n(tensors_t_convoluted)
                 # put together
@@ -1775,20 +1928,26 @@ def conv4d_stacked(input, filter,
                 input_patch = tf.concat(input_patch, axis=4)
                 if dilation_rate is not None:
                     result_patch = tf.nn.convolution(
-                                input=input_patch,
-                                filters=kernel_patch,
-                                strides=(strides[1:stack_axis] +
-                                         strides[stack_axis+1:5]),
-                                padding=padding,
-                                dilations=(dilation_rate[:stack_axis-1] +
-                                           dilation_rate[stack_axis:]))
+                        input=input_patch,
+                        filters=kernel_patch,
+                        strides=(
+                            strides[1:stack_axis] + strides[stack_axis + 1 : 5]
+                        ),
+                        padding=padding,
+                        dilations=(
+                            dilation_rate[: stack_axis - 1]
+                            + dilation_rate[stack_axis:]
+                        ),
+                    )
                 else:
                     result_patch = tf.nn.conv3d(
-                                            input=input_patch,
-                                            filters=kernel_patch,
-                                            strides=(strides[:stack_axis] +
-                                                     strides[stack_axis+1:]),
-                                            padding=padding)
+                        input=input_patch,
+                        filters=kernel_patch,
+                        strides=(
+                            strides[:stack_axis] + strides[stack_axis + 1 :]
+                        ),
+                        padding=padding,
+                    )
                 result_t.append(result_patch)
 
     # stack together

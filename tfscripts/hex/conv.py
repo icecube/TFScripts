@@ -1,11 +1,11 @@
-'''
+"""
 tfscripts hexagonal convolution utility functions
     Hex utility functions
     hex conv 3d and 4d [tf.Modules]
 
 ToDo:
     - Remove duplicate code
-'''
+"""
 
 from __future__ import division, print_function
 
@@ -44,10 +44,10 @@ def get_num_hex_points(edge_length):
         Description
     """
     if edge_length < 0:
-        raise ValueError('get_num_hex_points: expected edge_length >= 0')
+        raise ValueError("get_num_hex_points: expected edge_length >= 0")
     if edge_length == 0:
         return 1
-    return (edge_length-1)*6 + get_num_hex_points(edge_length-1)
+    return (edge_length - 1) * 6 + get_num_hex_points(edge_length - 1)
 
 
 def hex_distance(h1, h2):
@@ -68,21 +68,25 @@ def hex_distance(h1, h2):
     """
     a1, b1 = h1
     a2, b2 = h2
-    c1 = -a1-b1
-    c2 = -a2-b2
+    c1 = -a1 - b1
+    c2 = -a2 - b2
     return (abs(a1 - a2) + abs(b1 - b2) + abs(c1 - c2)) / 2
 
 
-def get_hex_kernel(filter_size, print_kernel=False, get_ones=False,
-                   float_precision=FLOAT_PRECISION):
-    '''Get hexagonal convolution kernel
+def get_hex_kernel(
+    filter_size,
+    print_kernel=False,
+    get_ones=False,
+    float_precision=FLOAT_PRECISION,
+):
+    """Get hexagonal convolution kernel
 
     Create Weights for a hexagonal kernel.
     The Kernel will be of a hexagonal shape in the first two dimensions,
     while the other dimensions are normal.
     The hexagonal kernel is off the shape:
     [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
-    But elments with coordinates in the first two dimensions, that don't belong
+    But elements with coordinates in the first two dimensions, that don't belong
     to the hexagon are set to a tf.Constant 0.
 
     The hexagon is defined by filter_size[0:2].
@@ -150,17 +154,19 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False,
     ------
     ValueError
         Description
-    '''
+    """
     k = filter_size[0]
     x = filter_size[1]
 
     if x >= k:
-        raise ValueError("get_hex_kernel: filter_size (k,x,z) must fulfill "
-                         "x < k: ({}, {}, {})".format(k, x, filter_size[2]))
+        raise ValueError(
+            "get_hex_kernel: filter_size (k,x,z) must fulfill "
+            "x < k: ({}, {}, {})".format(k, x, filter_size[2])
+        )
     if x == 0:
-        kernel_edge_points = 2*k - 1
+        kernel_edge_points = 2 * k - 1
     else:
-        kernel_edge_points = 2*k + 1
+        kernel_edge_points = 2 * k + 1
 
     zeros = tf.zeros(filter_size[2:], dtype=float_precision)
     ones = tf.ones(filter_size[2:], dtype=float_precision)
@@ -176,15 +182,16 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False,
             # regular aligned hexagons
             # -------------------------
             if x == 0:
-                if a+b < k - 1 or a + b > 3*k - 3:
+                if a + b < k - 1 or a + b > 3 * k - 3:
                     weights = zeros
                     test_hex_dict[(a, b)] = 0
                 else:
                     if get_ones:
                         weights = ones
                     else:
-                        weights = new_weights(filter_size[2:],
-                                              float_precision=float_precision)
+                        weights = new_weights(
+                            filter_size[2:], float_precision=float_precision
+                        )
                         var_list.append(weights)
                     test_hex_dict[(a, b)] = 1
 
@@ -195,33 +202,38 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False,
                 inHexagon = False
                 # check if inside normal k.0 aligned hexagon
                 #   |----inside normal k.0 rhombus -----------|
-                if ((a > 0 and a < 2*k) and (b > 0 and b < 2*k) and
+                if (
+                    (a > 0 and a < 2 * k)
+                    and (b > 0 and b < 2 * k)
+                    and
                     #   |--in k.0 aligned hexagon-|
-                        (a+b > k and a + b < 3*k)):
+                    (a + b > k and a + b < 3 * k)
+                ):
 
-                    if a+b > k and a + b < 3*k:
+                    if a + b > k and a + b < 3 * k:
                         inHexagon = True
                 else:
                     # add 6 additional edges outside of k.0 aligned hexagon
-                    if a == 2*k-x and b == 0:  # Edge 1
+                    if a == 2 * k - x and b == 0:  # Edge 1
                         inHexagon = True
                     elif a == k - x and b == x:  # Edge 2
                         inHexagon = True
-                    elif a == 0 and b == k+x:  # Edge 3
+                    elif a == 0 and b == k + x:  # Edge 3
                         inHexagon = True
-                    elif a == x and b == 2*k:  # Edge 4
+                    elif a == x and b == 2 * k:  # Edge 4
                         inHexagon = True
-                    elif a == k+x and b == 2*k-x:  # Edge 5
+                    elif a == k + x and b == 2 * k - x:  # Edge 5
                         inHexagon = True
-                    elif a == 2*k and b == k-x:  # Edge 6
+                    elif a == 2 * k and b == k - x:  # Edge 6
                         inHexagon = True
                 # get weights or constant 0 depending on if point is in hexagon
                 if inHexagon:
                     if get_ones:
                         weights = ones
                     else:
-                        weights = new_weights(filter_size[2:],
-                                              float_precision=float_precision)
+                        weights = new_weights(
+                            filter_size[2:], float_precision=float_precision
+                        )
                         var_list.append(weights)
                     test_hex_dict[(a, b)] = 1
                 else:
@@ -237,23 +249,24 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False,
 
 
 class ConvHex(tf.Module):
-    """Convolve a hex2d or hex3d layer (2d hex + 1d cartesian)
-    """
+    """Convolve a hex2d or hex3d layer (2d hex + 1d cartesian)"""
 
-    def __init__(self,
-                 input_shape,
-                 filter_size,
-                 num_filters,
-                 padding='SAME',
-                 strides=[1, 1, 1, 1, 1],
-                 num_rotations=1,
-                 dilation_rate=None,
-                 zero_out=False,
-                 kernel=None,
-                 var_list=None,
-                 azimuth=None,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        filter_size,
+        num_filters,
+        padding="SAME",
+        strides=[1, 1, 1, 1, 1],
+        num_rotations=1,
+        dilation_rate=None,
+        zero_out=False,
+        kernel=None,
+        var_list=None,
+        azimuth=None,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -347,17 +360,22 @@ class ConvHex(tf.Module):
         if kernel is None:
             if azimuth is not None and filter_size[:2] != [1, 0]:
                 kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
-                            filter_size+[num_channels, num_filters], azimuth,
-                            float_precision=float_precision)
+                    filter_size + [num_channels, num_filters],
+                    azimuth,
+                    float_precision=float_precision,
+                )
             else:
                 if num_rotations > 1:
                     kernel, var_list = rotation.get_rotated_hex_kernel(
-                        filter_size+[num_channels, num_filters], num_rotations,
-                        float_precision=float_precision)
+                        filter_size + [num_channels, num_filters],
+                        num_rotations,
+                        float_precision=float_precision,
+                    )
                 else:
                     kernel, var_list = get_hex_kernel(
-                                    filter_size+[num_channels, num_filters],
-                                    float_precision=float_precision)
+                        filter_size + [num_channels, num_filters],
+                        float_precision=float_precision,
+                    )
 
         self.num_filters = num_filters
         self.filter_size = filter_size
@@ -391,18 +409,20 @@ class ConvHex(tf.Module):
 
         if self.azimuth is not None and self.filter_size[:2] != [1, 0]:
             result = dynamic_conv(
-                                inputs=inputs,
-                                filters=self.kernel,
-                                strides=self.strides[1:-1],
-                                padding=self.padding,
-                                dilation_rate=self.dilation_rate,
-                                )
+                inputs=inputs,
+                filters=self.kernel,
+                strides=self.strides[1:-1],
+                padding=self.padding,
+                dilation_rate=self.dilation_rate,
+            )
         else:
-            result = tf.nn.convolution(input=inputs,
-                                       filters=self.kernel,
-                                       strides=self.strides[1:-1],
-                                       padding=self.padding,
-                                       dilations=self.dilation_rate)
+            result = tf.nn.convolution(
+                input=inputs,
+                filters=self.kernel,
+                strides=self.strides[1:-1],
+                padding=self.padding,
+                dilations=self.dilation_rate,
+            )
 
         # zero out elements that don't belong on hexagon or IceCube Strings
         if self.zero_out:
@@ -410,62 +430,70 @@ class ConvHex(tf.Module):
             if result.get_shape().as_list()[1:3] == [10, 10]:
                 # Assuming IceCube shape
                 logger = logging.getLogger(__name__)
-                logger.warning('Assuming IceCube shape for layer', result)
+                logger.warning("Assuming IceCube shape for layer", result)
 
                 zero_out_matrix, var_list = get_icecube_kernel(
-                                        result.get_shape().as_list()[3:],
-                                        get_ones=True,
-                                        float_precision=self.float_precision)
-                result = result*zero_out_matrix
+                    result.get_shape().as_list()[3:],
+                    get_ones=True,
+                    float_precision=self.float_precision,
+                )
+                result = result * zero_out_matrix
 
                 # Make sure there were no extra variables created.
                 # These would have to be saved to tf.Module, to allow tracking
-                assert var_list == [], 'No created variables expected!'
+                assert var_list == [], "No created variables expected!"
 
             else:
                 # Generic hexagonal shape
                 zero_out_matrix, var_list = get_hex_kernel(
-                                [(result.get_shape().as_list()[1]+1) // 2, 0,
-                                 result.get_shape().as_list()[3],
-                                 self.num_filters * self.num_rotations],
-                                get_ones=True,
-                                float_precision=self.float_precision)
+                    [
+                        (result.get_shape().as_list()[1] + 1) // 2,
+                        0,
+                        result.get_shape().as_list()[3],
+                        self.num_filters * self.num_rotations,
+                    ],
+                    get_ones=True,
+                    float_precision=self.float_precision,
+                )
 
                 # Make sure there were no extra variables created.
                 # These would have to be saved to tf.Module, to allow tracking
-                assert var_list == [], 'No created variables expected!'
+                assert var_list == [], "No created variables expected!"
 
                 if result.get_shape()[1:] == zero_out_matrix.get_shape():
-                    result = result*zero_out_matrix
+                    result = result * zero_out_matrix
                 else:
-                    raise ValueError("ConvHex: Shapes do not match for "
-                                     "zero_out_matrix and result. "
-                                     " {!r} != {!r}".format(
-                                                result.get_shape()[1:],
-                                                zero_out_matrix.get_shape()))
+                    raise ValueError(
+                        "ConvHex: Shapes do not match for "
+                        "zero_out_matrix and result. "
+                        " {!r} != {!r}".format(
+                            result.get_shape()[1:], zero_out_matrix.get_shape()
+                        )
+                    )
 
         return result
 
 
 class ConvHex4d(tf.Module):
-    """Convolve a hex4hex3d layer (2d hex + 1d cartesian)
-    """
+    """Convolve a hex4hex3d layer (2d hex + 1d cartesian)"""
 
-    def __init__(self,
-                 input_shape,
-                 filter_size,
-                 num_filters,
-                 padding='VALID',
-                 strides=[1, 1, 1, 1, 1, 1],
-                 num_rotations=1,
-                 dilation_rate=None,
-                 kernel=None,
-                 var_list=None,
-                 azimuth=None,
-                 stack_axis=None,
-                 zero_out=False,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        filter_size,
+        num_filters,
+        padding="VALID",
+        strides=[1, 1, 1, 1, 1, 1],
+        num_rotations=1,
+        dilation_rate=None,
+        kernel=None,
+        var_list=None,
+        azimuth=None,
+        stack_axis=None,
+        zero_out=False,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -565,17 +593,22 @@ class ConvHex4d(tf.Module):
         if kernel is None:
             if azimuth is not None:
                 kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
-                            filter_size+[num_channels, num_filters], azimuth,
-                            float_precision=float_precision)
+                    filter_size + [num_channels, num_filters],
+                    azimuth,
+                    float_precision=float_precision,
+                )
             else:
                 if num_rotations > 1:
                     kernel, var_list = rotation.get_rotated_hex_kernel(
-                        filter_size+[num_channels, num_filters], num_rotations,
-                        float_precision=float_precision)
+                        filter_size + [num_channels, num_filters],
+                        num_rotations,
+                        float_precision=float_precision,
+                    )
                 else:
                     kernel, var_list = get_hex_kernel(
-                                    filter_size+[num_channels, num_filters],
-                                    float_precision=float_precision)
+                        filter_size + [num_channels, num_filters],
+                        float_precision=float_precision,
+                    )
 
         self.num_filters = num_filters
         self.filter_size = filter_size
@@ -609,46 +642,56 @@ class ConvHex4d(tf.Module):
         assert len(inputs.get_shape()) == 6
 
         # convolve with tf conv4d_stacked
-        result = conv4d_stacked(input=inputs,
-                                filter=self.kernel,
-                                strides=self.strides,
-                                padding=self.padding,
-                                dilation_rate=self.dilation_rate,
-                                stack_axis=self.stack_axis)
+        result = conv4d_stacked(
+            input=inputs,
+            filter=self.kernel,
+            strides=self.strides,
+            padding=self.padding,
+            dilation_rate=self.dilation_rate,
+            stack_axis=self.stack_axis,
+        )
 
         # zero out elements that don't belong on hexagon
         if self.zero_out:
             zero_out_matrix, var_list = get_hex_kernel(
-                                [int((result.get_shape().as_list()[1]+1)/2), 0,
-                                 result.get_shape().as_list()[3],
-                                 result.get_shape().as_list()[4],
-                                 self.num_filters * self.num_rotations],
-                                get_ones=True,
-                                float_precision=self.float_precision)
+                [
+                    int((result.get_shape().as_list()[1] + 1) / 2),
+                    0,
+                    result.get_shape().as_list()[3],
+                    result.get_shape().as_list()[4],
+                    self.num_filters * self.num_rotations,
+                ],
+                get_ones=True,
+                float_precision=self.float_precision,
+            )
 
             # Make sure there were no extra variables created.
             # These would have to be saved to tf.Module, to allow tracking
-            assert var_list == [], 'No created variables expected!'
+            assert var_list == [], "No created variables expected!"
 
             if result.get_shape()[1:] == zero_out_matrix.get_shape():
                 result = result * zero_out_matrix
             else:
                 msg = "conv_hex4d: Shapes do not match for "
                 msg += "zero_out_matrix and result. {!r} != {!r}"
-                raise ValueError(msg.format(result.get_shape()[1:],
-                                            zero_out_matrix.get_shape()))
+                raise ValueError(
+                    msg.format(
+                        result.get_shape()[1:], zero_out_matrix.get_shape()
+                    )
+                )
 
         return result
 
 
-def create_conv_hex_layers_weights(num_input_channels,
-                                   filter_size_list,
-                                   num_filters_list,
-                                   num_rotations_list=1,
-                                   azimuth_list=None,
-                                   float_precision=FLOAT_PRECISION,
-                                   ):
-    '''Create weights and biases for conv hex n-dimensional layers with n >= 2
+def create_conv_hex_layers_weights(
+    num_input_channels,
+    filter_size_list,
+    num_filters_list,
+    num_rotations_list=1,
+    azimuth_list=None,
+    float_precision=FLOAT_PRECISION,
+):
+    """Create weights and biases for conv hex n-dimensional layers with n >= 2
 
     Parameters
     ----------
@@ -713,44 +756,51 @@ def create_conv_hex_layers_weights(num_input_channels,
         List of bias tensors for each layer.
     list of tf.Variable
         A list of tensorflow variables created in this function
-    '''
+    """
 
     # create num_rotations_list
     if isinstance(num_rotations_list, int):
-        num_rotations_list = [num_rotations_list for i
-                              in range(len(num_filters_list))]
+        num_rotations_list = [
+            num_rotations_list for i in range(len(num_filters_list))
+        ]
     # create azimuth_list
     if azimuth_list is None or tf.is_tensor(azimuth_list):
-        azimuth_list = [azimuth_list for i in range(noOfLayers)]
+        azimuth_list = [azimuth_list for i in range(len(num_filters_list))]
 
     weights_list = []
     biases_list = []
     variable_list = []
     for filter_size, num_filters, num_rotations, azimuth in zip(
-                                        filter_size_list,
-                                        num_filters_list,
-                                        num_rotations_list,
-                                        azimuth_list,
-                                        ):
+        filter_size_list,
+        num_filters_list,
+        num_rotations_list,
+        azimuth_list,
+    ):
         if azimuth is not None:
             kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
-                filter_size, azimuth, float_precision=float_precision)
+                filter_size, azimuth, float_precision=float_precision
+            )
         else:
             if num_rotations > 1:
                 kernel, var_list = rotation.get_rotated_hex_kernel(
-                                        filter_size +
-                                        [num_input_channels, num_filters],
-                                        num_rotations,
-                                        float_precision=float_precision)
+                    filter_size + [num_input_channels, num_filters],
+                    num_rotations,
+                    float_precision=float_precision,
+                )
             else:
                 kernel, var_list = get_hex_kernel(
-                            filter_size+[num_input_channels, num_filters],
-                            float_precision=float_precision)
+                    filter_size + [num_input_channels, num_filters],
+                    float_precision=float_precision,
+                )
 
         variable_list.extend(var_list)
         weights_list.append(kernel)
-        biases_list.append(new_biases(length=num_filters*num_rotations,
-                                      float_precision=float_precision))
+        biases_list.append(
+            new_biases(
+                length=num_filters * num_rotations,
+                float_precision=float_precision,
+            )
+        )
         num_input_channels = num_filters
 
     return weights_list, biases_list, variable_list

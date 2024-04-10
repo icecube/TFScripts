@@ -1,6 +1,6 @@
-'''
+"""
 tfscripts layers are defined here
-'''
+"""
 
 from __future__ import division, print_function
 
@@ -20,7 +20,7 @@ from tfscripts import FLOAT_PRECISION
 
 
 def flatten_layer(layer):
-    '''
+    """
     Helper-function for flattening a layer
 
     Parameters
@@ -32,7 +32,7 @@ def flatten_layer(layer):
     -------
     tf.Tensor
         Flattened layer.
-    '''
+    """
     # Get the shape of the input layer.
     layer_shape = layer.get_shape()
 
@@ -49,7 +49,7 @@ def flatten_layer(layer):
 
 
 def flatten_hex_layer(hex_layer):
-    '''Helper-function for flattening an hexagonally shaped layer
+    """Helper-function for flattening an hexagonally shaped layer
 
     Assumes hexagonal shape in the first two spatial dimensions
     of the form:
@@ -65,7 +65,7 @@ def flatten_hex_layer(hex_layer):
       where s is the size of the x- and y-dimension
 
     will be discarded.
-    These correspond to the elments outside of the hexagon
+    These correspond to the elements outside of the hexagon
 
     Parameters
     ----------
@@ -83,7 +83,7 @@ def flatten_hex_layer(hex_layer):
     ------
     ValueError
         Description
-    '''
+    """
 
     # Get the shape of the input layer.
     layer_shape = hex_layer.get_shape().as_list()
@@ -93,8 +93,10 @@ def flatten_hex_layer(hex_layer):
 
     size = layer_shape[1]
     if layer_shape[2] != size:
-        raise ValueError("flatten_hex_layer: size of x- and y- dimension must "
-                         "match, but are {!r}".format(layer_shape[1:3]))
+        raise ValueError(
+            "flatten_hex_layer: size of x- and y- dimension must "
+            "match, but are {!r}".format(layer_shape[1:3])
+        )
 
     num_features = np.prod(layer_shape[3:])
 
@@ -102,9 +104,18 @@ def flatten_hex_layer(hex_layer):
     flat_elements = []
     for a in range(size):
         for b in range(size):
-            if not (a + b < (size-1)//2 or a + b > 2*(size-1) - (size-1)//2):
-                flattened_element = tf.reshape(hex_layer[:, a, b, ],
-                                               [-1, num_features])
+            if not (
+                a + b < (size - 1) // 2
+                or a + b > 2 * (size - 1) - (size - 1) // 2
+            ):
+                flattened_element = tf.reshape(
+                    hex_layer[
+                        :,
+                        a,
+                        b,
+                    ],
+                    [-1, num_features],
+                )
                 flat_elements.append(flattened_element)
                 total_num_features += num_features
 
@@ -113,7 +124,7 @@ def flatten_hex_layer(hex_layer):
 
 
 class ConvNdLayer(tf.Module):
-    """TF Module for creating a new nD Convolutional Layer
+    """TF Module for creating a new n-dim Convolutional Layer
 
     1 <= n <=4 are supported.
     For n == 3 (3 spatial dimensions x, y, and z):
@@ -123,32 +134,34 @@ class ConvNdLayer(tf.Module):
             due to downsizing in pooling operation.
     """
 
-    def __init__(self,
-                 input_shape,
-                 filter_size,
-                 num_filters,
-                 pooling_type=None,
-                 pooling_strides=None,
-                 pooling_ksize=None,
-                 pooling_padding='SAME',
-                 use_dropout=False,
-                 activation='elu',
-                 strides=None,
-                 padding='SAME',
-                 use_batch_normalisation=False,
-                 dilation_rate=None,
-                 use_residual=False,
-                 method='convolution',
-                 repair_std_deviation=True,
-                 var_list=None,
-                 weights=None,
-                 biases=None,
-                 trafo=None,
-                 hex_num_rotations=1,
-                 hex_azimuth=None,
-                 hex_zero_out=False,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        filter_size,
+        num_filters,
+        pooling_type=None,
+        pooling_strides=None,
+        pooling_ksize=None,
+        pooling_padding="SAME",
+        use_dropout=False,
+        activation="elu",
+        strides=None,
+        padding="SAME",
+        use_batch_normalisation=False,
+        dilation_rate=None,
+        use_residual=False,
+        method="convolution",
+        repair_std_deviation=True,
+        var_list=None,
+        weights=None,
+        biases=None,
+        trafo=None,
+        hex_num_rotations=1,
+        hex_azimuth=None,
+        hex_zero_out=False,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -321,7 +334,7 @@ class ConvNdLayer(tf.Module):
                 pooling_ksize = [1, 2, 2, 1]
             if strides is None:
                 strides = [1, 1, 1, 1]
-                
+
         elif num_dims == 1:
             # 1D convolution
             if pooling_strides is None:
@@ -332,12 +345,12 @@ class ConvNdLayer(tf.Module):
                 strides = [1, 1, 1]
 
         else:
-            msg = 'Currently only 1D, 2D, 3D or 4D supported {!r}'
+            msg = "Currently only 1D, 2D, 3D or 4D supported {!r}"
             raise ValueError(msg.format(input_shape))
 
         # make sure inferred dimension matches filter_size
         if not len(filter_size) == num_dims:
-            err_msg = 'Filter size {!r} does not fit to input shape {!r}'
+            err_msg = "Filter size {!r} does not fit to input shape {!r}"
             raise ValueError(err_msg.format(input_shape))
 
         num_input_channels = input_shape[-1]
@@ -346,181 +359,201 @@ class ConvNdLayer(tf.Module):
         shape = list(filter_size) + [num_input_channels, num_filters]
 
         # Create new weights aka. filters with the given shape.
-        if method.lower() == 'convolution':
+        if method.lower() == "convolution":
             if weights is None:
                 # weights = new_kernel_weights(shape=shape)
-                weights = new_weights(shape=shape,
-                                      float_precision=float_precision)
+                weights = new_weights(
+                    shape=shape, float_precision=float_precision
+                )
 
             # Create new biases, one for each filter.
             if biases is None:
-                biases = new_biases(length=num_filters,
-                                    float_precision=float_precision)
+                biases = new_biases(
+                    length=num_filters, float_precision=float_precision
+                )
 
             if num_dims == 1 or num_dims == 2 or num_dims == 3:
                 # create a temp function with all parameters set
                 def temp_func(inputs):
-                    return tf.nn.convolution(input=inputs,
-                                             filters=weights,
-                                             strides=strides[1:-1],
-                                             padding=padding,
-                                             dilations=dilation_rate)
+                    return tf.nn.convolution(
+                        input=inputs,
+                        filters=weights,
+                        strides=strides[1:-1],
+                        padding=padding,
+                        dilations=dilation_rate,
+                    )
+
                 self.conv_layer = temp_func
 
             elif num_dims == 4:
 
                 # create a temp function with all parameters set
                 def temp_func(inputs):
-                    return conv.conv4d_stacked(input=inputs,
-                                               filter=weights,
-                                               strides=strides,
-                                               padding=padding,
-                                               dilation_rate=dilation_rate)
+                    return conv.conv4d_stacked(
+                        input=inputs,
+                        filter=weights,
+                        strides=strides,
+                        padding=padding,
+                        dilation_rate=dilation_rate,
+                    )
+
                 self.conv_layer = temp_func
 
         # ---------------------
         # Hexagonal convolution
         # ---------------------
-        elif method.lower() == 'hex_convolution':
+        elif method.lower() == "hex_convolution":
             if num_dims == 1:
-                raise NotImplementedError(
-                    '1D hex_convolution not implemented')
+                raise NotImplementedError("1D hex_convolution not implemented")
             elif num_dims == 2 or num_dims == 3:
                 self.conv_layer = hx.ConvHex(
-                                            input_shape=input_shape,
-                                            filter_size=filter_size,
-                                            num_filters=num_filters,
-                                            padding=padding,
-                                            strides=strides,
-                                            num_rotations=hex_num_rotations,
-                                            azimuth=hex_azimuth,
-                                            dilation_rate=dilation_rate,
-                                            zero_out=hex_zero_out,
-                                            kernel=weights,
-                                            var_list=var_list,
-                                            float_precision=float_precision,
-                                            )
+                    input_shape=input_shape,
+                    filter_size=filter_size,
+                    num_filters=num_filters,
+                    padding=padding,
+                    strides=strides,
+                    num_rotations=hex_num_rotations,
+                    azimuth=hex_azimuth,
+                    dilation_rate=dilation_rate,
+                    zero_out=hex_zero_out,
+                    kernel=weights,
+                    var_list=var_list,
+                    float_precision=float_precision,
+                )
             elif num_dims == 4:
                 self.conv_layer = hx.ConvHex4d(
-                                            input_shape=input_shape,
-                                            filter_size=filter_size,
-                                            num_filters=num_filters,
-                                            padding=padding,
-                                            strides=strides,
-                                            num_rotations=hex_num_rotations,
-                                            azimuth=hex_azimuth,
-                                            dilation_rate=dilation_rate,
-                                            zero_out=hex_zero_out,
-                                            kernel=weights,
-                                            var_list=var_list,
-                                            float_precision=float_precision,
-                                            )
+                    input_shape=input_shape,
+                    filter_size=filter_size,
+                    num_filters=num_filters,
+                    padding=padding,
+                    strides=strides,
+                    num_rotations=hex_num_rotations,
+                    azimuth=hex_azimuth,
+                    dilation_rate=dilation_rate,
+                    zero_out=hex_zero_out,
+                    kernel=weights,
+                    var_list=var_list,
+                    float_precision=float_precision,
+                )
 
             # Create new biases, one for each filter.
             if biases is None:
-                biases = new_biases(length=num_filters*hex_num_rotations,
-                                    float_precision=float_precision)
+                biases = new_biases(
+                    length=num_filters * hex_num_rotations,
+                    float_precision=float_precision,
+                )
 
         # -------------------
         # locally connected
         # -------------------
-        elif method.lower() == 'locally_connected':
+        elif method.lower() == "locally_connected":
 
             if num_dims == 1:
                 self.conv_layer = conv.LocallyConnected1d(
-                                            input_shape=input_shape,
-                                            num_outputs=num_filters,
-                                            filter_size=filter_size,
-                                            kernel=weights,
-                                            strides=strides[1:-1],
-                                            padding=padding,
-                                            dilation_rate=dilation_rate,
-                                            float_precision=float_precision)
+                    input_shape=input_shape,
+                    num_outputs=num_filters,
+                    filter_size=filter_size,
+                    kernel=weights,
+                    strides=strides[1:-1],
+                    padding=padding,
+                    dilation_rate=dilation_rate,
+                    float_precision=float_precision,
+                )
             elif num_dims == 2:
                 self.conv_layer = conv.LocallyConnected2d(
-                                            input_shape=input_shape,
-                                            num_outputs=num_filters,
-                                            filter_size=filter_size,
-                                            kernel=weights,
-                                            strides=strides[1:-1],
-                                            padding=padding,
-                                            dilation_rate=dilation_rate,
-                                            float_precision=float_precision)
+                    input_shape=input_shape,
+                    num_outputs=num_filters,
+                    filter_size=filter_size,
+                    kernel=weights,
+                    strides=strides[1:-1],
+                    padding=padding,
+                    dilation_rate=dilation_rate,
+                    float_precision=float_precision,
+                )
             elif num_dims == 3:
                 self.conv_layer = conv.LocallyConnected3d(
-                                            input_shape=input_shape,
-                                            num_outputs=num_filters,
-                                            filter_size=filter_size,
-                                            kernel=weights,
-                                            strides=strides[1:-1],
-                                            padding=padding,
-                                            dilation_rate=dilation_rate,
-                                            float_precision=float_precision)
+                    input_shape=input_shape,
+                    num_outputs=num_filters,
+                    filter_size=filter_size,
+                    kernel=weights,
+                    strides=strides[1:-1],
+                    padding=padding,
+                    dilation_rate=dilation_rate,
+                    float_precision=float_precision,
+                )
             elif num_dims == 4:
                 raise NotImplementedError(
-                    '4D locally connected not implemented!')
+                    "4D locally connected not implemented!"
+                )
 
             # Create new biases, one for each filter and position
             if biases is None:
                 biases = new_locally_connected_weights(
                     shape=self.conv_layer.output_shape[1:],
                     shared_axes=[i for i in range(num_dims)],
-                    float_precision=float_precision)
+                    float_precision=float_precision,
+                )
 
         # -------------------
         # local trafo
         # -------------------
-        elif method.lower() == 'local_trafo':
+        elif method.lower() == "local_trafo":
 
-            assert (weights is None and biases is None)
+            assert weights is None and biases is None
 
             if num_dims == 3:
 
                 # create a temp function with all parameters set
                 def temp_func(inputs):
                     return conv.trans3d_op(
-                                    input=inputs,
-                                    num_out_channel=num_filters,
-                                    filter_size=filter_size,
-                                    method=method,
-                                    trafo=trafo,
-                                    filter=weights,
-                                    strides=strides[1:-1],
-                                    padding=padding,
-                                    dilation_rate=dilation_rate,
-                                    stack_axis=None,
-                                    )
+                        input=inputs,
+                        num_out_channel=num_filters,
+                        filter_size=filter_size,
+                        method=method,
+                        trafo=trafo,
+                        filter=weights,
+                        strides=strides[1:-1],
+                        padding=padding,
+                        dilation_rate=dilation_rate,
+                        stack_axis=None,
+                    )
+
                 self.conv_layer = temp_func
             else:
-                raise NotImplementedError('local_trafo currently only for 3D')
+                raise NotImplementedError("local_trafo currently only for 3D")
 
         # --------------------
         # dynamic convolution
         # --------------------
-        elif method.lower() == 'dynamic_convolution':
+        elif method.lower() == "dynamic_convolution":
 
             assert weights is not None
 
             if num_dims == 1 or num_dims == 2 or num_dims == 3:
                 # create a temp function with all parameters set
                 def temp_func(inputs):
-                    return conv.dynamic_conv(inputs=inputs,
-                                             filters=weights,
-                                             strides=strides[1:-1],
-                                             padding=padding,
-                                             dilation_rate=dilation_rate)
+                    return conv.dynamic_conv(
+                        inputs=inputs,
+                        filters=weights,
+                        strides=strides[1:-1],
+                        padding=padding,
+                        dilation_rate=dilation_rate,
+                    )
+
                 self.conv_layer = temp_func
 
             elif num_dims == 4:
                 raise NotImplementedError(
-                    '4D dynamic_convolution not implemented')
+                    "4D dynamic_convolution not implemented"
+                )
 
             if biases is None:
-                biases = new_biases(length=num_filters,
-                                    float_precision=float_precision)
+                biases = new_biases(
+                    length=num_filters, float_precision=float_precision
+                )
 
         else:
-            raise ValueError('Unknown method: {!r}'.format(method))
+            raise ValueError("Unknown method: {!r}".format(method))
 
         self.biases = biases
         self.weights = weights
@@ -531,12 +564,13 @@ class ConvNdLayer(tf.Module):
         conv_layer_output = self.conv_layer(dummy_data)
 
         self.activation = core.Activation(
-                            activation_type=activation,
-                            input_shape=conv_layer_output.shape,
-                            use_batch_normalisation=use_batch_normalisation,
-                            float_precision=float_precision)
+            activation_type=activation,
+            input_shape=conv_layer_output.shape,
+            use_batch_normalisation=use_batch_normalisation,
+            float_precision=float_precision,
+        )
 
-        # assing and keep track of settings
+        # assign and keep track of settings
         self.input_shape = input_shape
         self.num_dims = num_dims
         self.filter_size = filter_size
@@ -559,9 +593,10 @@ class ConvNdLayer(tf.Module):
         # Use as Residual
         if use_residual:
             self.residual_add = core.AddResidual(
-                                    residual_shape=self.output_shape,
-                                    strides=strides,
-                                    float_precision=float_precision)
+                residual_shape=self.output_shape,
+                strides=strides,
+                float_precision=float_precision,
+            )
 
     def __call__(self, inputs, is_training, keep_prob=None):
         """Apply Module.
@@ -596,8 +631,11 @@ class ConvNdLayer(tf.Module):
 
         # check shape of input tensor
         if inputs.shape[1:].as_list() != self.input_shape[1:]:
-            raise ValueError('Shape mismatch: {!r} != {!r}'.format(
-                inputs.shape[1:].as_list(), self.input_shape[1:]))
+            raise ValueError(
+                "Shape mismatch: {!r} != {!r}".format(
+                    inputs.shape[1:].as_list(), self.input_shape[1:]
+                )
+            )
 
         # Perform convolution/transformation
         layer = self.conv_layer(inputs)
@@ -621,7 +659,7 @@ class ConvNdLayer(tf.Module):
         # In the case of the hex_convolution, this factor gets reduced to
         # the number of non zero elements in the hex kernel.
         if self.repair_std_deviation:
-            if self.method.lower() == 'hex_convolution':
+            if self.method.lower() == "hex_convolution":
 
                 num_filter_vars = hx.get_num_hex_points(self.filter_size[0])
                 if len(self.filter_size) > 2:
@@ -635,14 +673,15 @@ class ConvNdLayer(tf.Module):
 
                 layer = layer / np.sqrt(num_filter_vars * num_input_channels)
             else:
-                layer = layer / np.sqrt(np.prod(self.filter_size)
-                                        * num_input_channels)
+                layer = layer / np.sqrt(
+                    np.prod(self.filter_size) * num_input_channels
+                )
 
         # Add the biases to the results of the convolution.
         # A bias-value is added to each filter-channel.
         if self.biases is not None:
             if self.repair_std_deviation:
-                layer = (layer + self.biases) / np.sqrt(2.)
+                layer = (layer + self.biases) / np.sqrt(2.0)
             else:
                 layer = layer + self.biases
 
@@ -670,44 +709,51 @@ class ConvNdLayer(tf.Module):
             The layer on which to apply pooling
         """
         if self.num_dims == 1:
-            layer = pooling.pool1d(layer=layer,
-                                   ksize=self.pooling_ksize,
-                                   strides=self.pooling_strides,
-                                   padding=self.pooling_padding,
-                                   pooling_type=self.pooling_type,
-                                   )
+            layer = pooling.pool1d(
+                layer=layer,
+                ksize=self.pooling_ksize,
+                strides=self.pooling_strides,
+                padding=self.pooling_padding,
+                pooling_type=self.pooling_type,
+            )
         elif self.num_dims == 2:
-            layer = pooling.pool2d(layer=layer,
-                                   ksize=self.pooling_ksize,
-                                   strides=self.pooling_strides,
-                                   padding=self.pooling_padding,
-                                   pooling_type=self.pooling_type,
-                                   )
+            layer = pooling.pool2d(
+                layer=layer,
+                ksize=self.pooling_ksize,
+                strides=self.pooling_strides,
+                padding=self.pooling_padding,
+                pooling_type=self.pooling_type,
+            )
         elif self.num_dims == 3:
-            layer = pooling.pool3d(layer=layer,
-                                   ksize=self.pooling_ksize,
-                                   strides=self.pooling_strides,
-                                   padding=self.pooling_padding,
-                                   pooling_type=self.pooling_type,
-                                   )
+            layer = pooling.pool3d(
+                layer=layer,
+                ksize=self.pooling_ksize,
+                strides=self.pooling_strides,
+                padding=self.pooling_padding,
+                pooling_type=self.pooling_type,
+            )
         elif self.num_dims == 4:
-            if pooling_type == 'max':
+            if self.pooling_type == "max":
                 layer = pooling.max_pool4d_stacked(
-                                                input=layer,
-                                                ksize=self.pooling_ksize,
-                                                strides=self.pooling_strides,
-                                                padding=self.pooling_padding)
-            elif pooling_type == 'avg':
+                    input=layer,
+                    ksize=self.pooling_ksize,
+                    strides=self.pooling_strides,
+                    padding=self.pooling_padding,
+                )
+            elif self.pooling_type == "avg":
                 layer = pooling.avg_pool4d_stacked(
-                                                input=layer,
-                                                ksize=self.pooling_ksize,
-                                                strides=self.pooling_strides,
-                                                padding=self.pooling_padding)
+                    input=layer,
+                    ksize=self.pooling_ksize,
+                    strides=self.pooling_strides,
+                    padding=self.pooling_padding,
+                )
             else:
-                raise NotImplementedError("Pooling type not supported: "
-                                          "{!r}".format(self.pooling_type))
+                raise NotImplementedError(
+                    "Pooling type not supported: "
+                    "{!r}".format(self.pooling_type)
+                )
         else:
-            raise NotImplementedError('Only supported 1d, 2d, 3d, 4d!')
+            raise NotImplementedError("Only supported 1d, 2d, 3d, 4d!")
 
         return layer
 
@@ -715,23 +761,25 @@ class ConvNdLayer(tf.Module):
 class FCLayer(tf.Module):
     """TF Module for creating a new Fully-Connected Layer
 
-        input: 2-dim tensor of shape [batch_size, num_inputs]
-        output: 2-dim tensor of shape [batch_size, num_outputs]
+    input: 2-dim tensor of shape [batch_size, num_inputs]
+    output: 2-dim tensor of shape [batch_size, num_outputs]
     """
 
-    def __init__(self,
-                 input_shape,
-                 num_outputs,
-                 use_dropout=False,
-                 activation='elu',
-                 use_batch_normalisation=False,
-                 use_residual=False,
-                 weights=None,
-                 biases=None,
-                 max_out_size=None,
-                 repair_std_deviation=True,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        num_outputs,
+        use_dropout=False,
+        activation="elu",
+        use_batch_normalisation=False,
+        use_residual=False,
+        weights=None,
+        biases=None,
+        max_out_size=None,
+        repair_std_deviation=True,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -786,16 +834,18 @@ class FCLayer(tf.Module):
             )
         if biases is None:
             biases = new_biases(
-                length=num_outputs, float_precision=float_precision)
+                length=num_outputs, float_precision=float_precision
+            )
 
         self.biases = biases
         self.weights = weights
 
         self.activation = core.Activation(
-                            activation_type=activation,
-                            input_shape=[None, num_outputs],
-                            use_batch_normalisation=use_batch_normalisation,
-                            float_precision=float_precision)
+            activation_type=activation,
+            input_shape=[None, num_outputs],
+            use_batch_normalisation=use_batch_normalisation,
+            float_precision=float_precision,
+        )
 
         # calculate residual strides
         if max_out_size is not None:
@@ -806,7 +856,7 @@ class FCLayer(tf.Module):
 
             layer_shape[-1] = layer_shape[-1] // max_out_size
             channel_stride = max(1, num_inputs // layer_shape[-1])
-            res_strides = [1 for i in input_shape[:-1]]+[channel_stride]
+            res_strides = [1 for i in input_shape[:-1]] + [channel_stride]
 
         else:
             res_strides = None
@@ -820,9 +870,10 @@ class FCLayer(tf.Module):
         # Use as Residual
         if use_residual:
             self.residual_add = core.AddResidual(
-                                            residual_shape=output_shape,
-                                            strides=res_strides,
-                                            float_precision=float_precision)
+                residual_shape=output_shape,
+                strides=res_strides,
+                float_precision=float_precision,
+            )
 
         self.output_shape = output_shape
         self.input_shape = input_shape
@@ -865,8 +916,11 @@ class FCLayer(tf.Module):
 
         # check shape of input tensor
         if inputs.shape[1:].as_list() != self.input_shape[1:]:
-            raise ValueError('Shape mismatch: {!r} != {!r}'.format(
-                inputs.shape[1:].as_list(), self.input_shape[1:]))
+            raise ValueError(
+                "Shape mismatch: {!r} != {!r}".format(
+                    inputs.shape[1:].as_list(), self.input_shape[1:]
+                )
+            )
 
         num_inputs = inputs.get_shape().as_list()[-1]
 
@@ -878,7 +932,7 @@ class FCLayer(tf.Module):
         if self.repair_std_deviation:
             layer = layer / np.sqrt(num_inputs)
 
-            layer = (layer + self.biases) / np.sqrt(2.)
+            layer = (layer + self.biases) / np.sqrt(2.0)
         else:
             layer = layer + self.biases
 
@@ -887,9 +941,9 @@ class FCLayer(tf.Module):
 
         # max out channel dimension if specified
         if self.max_out_size is not None:
-            layer = core.maxout(inputs=layer,
-                                num_units=self.max_out_size,
-                                axis=-1)
+            layer = core.maxout(
+                inputs=layer, num_units=self.max_out_size, axis=-1
+            )
 
         # Use as Residual
         if self.use_residual:
@@ -904,23 +958,25 @@ class FCLayer(tf.Module):
 class ChannelWiseFCLayer(tf.Module):
     """TF Module for creating a new channel wise Fully-Connected Layer
 
-       input: 3-dim tensor of shape [batch_size, num_inputs, num_channel]
-       output: 3-dim tensor of shape [batch_size, num_outputs, num_channel]
+    input: 3-dim tensor of shape [batch_size, num_inputs, num_channel]
+    output: 3-dim tensor of shape [batch_size, num_outputs, num_channel]
     """
 
-    def __init__(self,
-                 input_shape,
-                 num_outputs,
-                 use_dropout=False,
-                 activation='elu',
-                 use_batch_normalisation=False,
-                 use_residual=False,
-                 weights=None,
-                 biases=None,
-                 max_out_size=None,
-                 repair_std_deviation=True,
-                 float_precision=FLOAT_PRECISION,
-                 name=None):
+    def __init__(
+        self,
+        input_shape,
+        num_outputs,
+        use_dropout=False,
+        activation="elu",
+        use_batch_normalisation=False,
+        use_residual=False,
+        weights=None,
+        biases=None,
+        max_out_size=None,
+        repair_std_deviation=True,
+        float_precision=FLOAT_PRECISION,
+        name=None,
+    ):
         """Initialize object
 
         Parameters
@@ -966,7 +1022,7 @@ class ChannelWiseFCLayer(tf.Module):
             input_shape = input_shape.as_list()
 
         # input: [batch, num_inputs, num_channel]
-        msg = '{} != [batch, num_inputs, num_channel]'
+        msg = "{} != [batch, num_inputs, num_channel]"
         assert len(input_shape) == 3, msg.format(input_shape)
 
         num_inputs = input_shape[1]
@@ -989,10 +1045,11 @@ class ChannelWiseFCLayer(tf.Module):
         self.weights = weights
 
         self.activation = core.Activation(
-                            activation_type=activation,
-                            input_shape=transpose_shape,
-                            use_batch_normalisation=use_batch_normalisation,
-                            float_precision=float_precision)
+            activation_type=activation,
+            input_shape=transpose_shape,
+            use_batch_normalisation=use_batch_normalisation,
+            float_precision=float_precision,
+        )
 
         # # calculate residual strides
         # if max_out_size is not None:
@@ -1012,9 +1069,10 @@ class ChannelWiseFCLayer(tf.Module):
         # Use as Residual
         if use_residual:
             self.residual_add = core.AddResidual(
-                            residual_shape=[None, num_channels, num_outputs],
-                            strides=res_strides,
-                            float_precision=float_precision)
+                residual_shape=[None, num_channels, num_outputs],
+                strides=res_strides,
+                float_precision=float_precision,
+            )
 
         # calculate output shape
         if max_out_size is not None:
@@ -1063,12 +1121,15 @@ class ChannelWiseFCLayer(tf.Module):
 
         # check shape of input tensor
         if inputs.shape[1:].as_list() != self.input_shape[1:]:
-            raise ValueError('Shape mismatch: {!r} != {!r}'.format(
-                inputs.shape[1:].as_list(), self.input_shape[1:]))
+            raise ValueError(
+                "Shape mismatch: {!r} != {!r}".format(
+                    inputs.shape[1:].as_list(), self.input_shape[1:]
+                )
+            )
 
         input_shape = inputs.get_shape().as_list()
         num_inputs = input_shape[1]
-        num_channels = input_shape[2]
+        # num_channels = input_shape[2]
 
         # input_transpose: [num_channel, batch, num_inputs]
         input_transpose = tf.transpose(a=inputs, perm=[2, 0, 1])
@@ -1084,7 +1145,7 @@ class ChannelWiseFCLayer(tf.Module):
         if self.repair_std_deviation:
             layer = layer / np.sqrt(num_inputs)
 
-            layer = (layer + self.biases) / np.sqrt(2.)
+            layer = (layer + self.biases) / np.sqrt(2.0)
         else:
             layer = layer + self.biases
 
@@ -1096,15 +1157,16 @@ class ChannelWiseFCLayer(tf.Module):
             # convert to [batch, num_channel, num_outputs]
             layer = tf.transpose(a=layer, perm=[0, 2, 1])
             layer = self.residual_add(
-                input=tf.transpose(a=inputs, perm=[0, 2, 1]), residual=layer)
+                input=tf.transpose(a=inputs, perm=[0, 2, 1]), residual=layer
+            )
             # convert back to [batch, num_outputs, num_channel]
             layer = tf.transpose(a=layer, perm=[0, 2, 1])
 
         # max out channel dimension if specified
         if self.max_out_size is not None:
-            layer = core.maxout(inputs=layer,
-                                num_units=self.max_out_size,
-                                axis=-1)
+            layer = core.maxout(
+                inputs=layer, num_units=self.max_out_size, axis=-1
+            )
 
         if self.use_dropout and is_training:
             layer = tf.nn.dropout(layer, 1 - keep_prob)
@@ -1113,24 +1175,24 @@ class ChannelWiseFCLayer(tf.Module):
 
 
 class FCLayers(tf.Module):
-    """TF Module for creating new fully connected layers.
-    """
+    """TF Module for creating new fully connected layers."""
 
-    def __init__(self,
-                 input_shape,
-                 fc_sizes,
-                 use_dropout_list=False,
-                 activation_list='elu',
-                 use_batch_normalisation_list=False,
-                 use_residual_list=False,
-                 weights_list=None,
-                 biases_list=None,
-                 max_out_size_list=None,
-                 repair_std_deviation_list=True,
-                 float_precision=FLOAT_PRECISION,
-                 name='fc_layer',
-                 verbose=False,
-                 ):
+    def __init__(
+        self,
+        input_shape,
+        fc_sizes,
+        use_dropout_list=False,
+        activation_list="elu",
+        use_batch_normalisation_list=False,
+        use_residual_list=False,
+        weights_list=None,
+        biases_list=None,
+        max_out_size_list=None,
+        repair_std_deviation_list=True,
+        float_precision=FLOAT_PRECISION,
+        name="fc_layer",
+        verbose=False,
+    ):
         """Initialize object
 
         Parameters
@@ -1200,8 +1262,9 @@ class FCLayers(tf.Module):
             use_dropout_list = [use_dropout_list for i in range(num_layers)]
         # create batch normalisation array
         if isinstance(use_batch_normalisation_list, bool):
-            use_batch_normalisation_list = [use_batch_normalisation_list
-                                            for i in range(num_layers)]
+            use_batch_normalisation_list = [
+                use_batch_normalisation_list for i in range(num_layers)
+            ]
         # create use_residual_list
         if use_residual_list is False or use_residual_list is True:
             use_residual_list = [use_residual_list for i in range(num_layers)]
@@ -1217,7 +1280,8 @@ class FCLayers(tf.Module):
         # create repair std deviation array
         if isinstance(repair_std_deviation_list, bool):
             repair_std_deviation_list = [
-                repair_std_deviation_list for i in range(num_layers)]
+                repair_std_deviation_list for i in range(num_layers)
+            ]
 
         # pick which fc layers to build
         if len(input_shape) == 3:
@@ -1229,8 +1293,9 @@ class FCLayers(tf.Module):
             FCLayerClass = FCLayer
 
         else:
-            raise ValueError('Input dimension is wrong: {}'.format(
-                                            inputs.get_shape().as_list()))
+            raise ValueError(
+                "Input dimension is wrong: {}".format(input_shape)
+            )
 
         # create layers:
         self.layers = []
@@ -1238,23 +1303,23 @@ class FCLayers(tf.Module):
             if i == 0:
                 previous_layer_shape = input_shape
             else:
-                previous_layer_shape = self.layers[i-1].output_shape
+                previous_layer_shape = self.layers[i - 1].output_shape
             layer_i = FCLayerClass(
-                    input_shape=previous_layer_shape,
-                    num_outputs=fc_sizes[i],
-                    activation=activation_list[i],
-                    use_dropout=use_dropout_list[i],
-                    use_batch_normalisation=use_batch_normalisation_list[i],
-                    use_residual=use_residual_list[i],
-                    weights=weights_list[i],
-                    biases=biases_list[i],
-                    max_out_size=max_out_size_list[i],
-                    repair_std_deviation=repair_std_deviation_list[i],
-                    float_precision=float_precision,
-                    name='{}_{:03d}'.format(name, i),
-                    )
+                input_shape=previous_layer_shape,
+                num_outputs=fc_sizes[i],
+                activation=activation_list[i],
+                use_dropout=use_dropout_list[i],
+                use_batch_normalisation=use_batch_normalisation_list[i],
+                use_residual=use_residual_list[i],
+                weights=weights_list[i],
+                biases=biases_list[i],
+                max_out_size=max_out_size_list[i],
+                repair_std_deviation=repair_std_deviation_list[i],
+                float_precision=float_precision,
+                name="{}_{:03d}".format(name, i),
+            )
             if verbose:
-                print('{}_{:03d}'.format(name, i), layer_i.output_shape)
+                print("{}_{:03d}".format(name, i), layer_i.output_shape)
             self.layers.append(layer_i)
 
     def __call__(self, inputs, is_training, keep_prob=None):
@@ -1287,36 +1352,36 @@ class FCLayers(tf.Module):
 
 
 class ConvNdLayers(tf.Module):
-    """TF Module for creating new conv1d, conv2d, conv3d, and conv4d layers.
-    """
+    """TF Module for creating new conv1d, conv2d, conv3d, and conv4d layers."""
 
-    def __init__(self,
-                 input_shape,
-                 filter_size_list,
-                 num_filters_list,
-                 pooling_type_list=None,
-                 pooling_strides_list=None,
-                 pooling_ksize_list=None,
-                 pooling_padding_list='SAME',
-                 padding_list='SAME',
-                 strides_list=None,
-                 activation_list='elu',
-                 use_batch_normalisation_list=False,
-                 dilation_rate_list=None,
-                 use_residual_list=False,
-                 use_dropout_list=False,
-                 method_list='convolution',
-                 repair_std_deviation_list=True,
-                 weights_list=None,
-                 biases_list=None,
-                 trafo_list=None,
-                 hex_num_rotations_list=1,
-                 hex_azimuth_list=None,
-                 hex_zero_out_list=False,
-                 float_precision=FLOAT_PRECISION,
-                 name='conv_{}d_layer',
-                 verbose=False,
-                 ):
+    def __init__(
+        self,
+        input_shape,
+        filter_size_list,
+        num_filters_list,
+        pooling_type_list=None,
+        pooling_strides_list=None,
+        pooling_ksize_list=None,
+        pooling_padding_list="SAME",
+        padding_list="SAME",
+        strides_list=None,
+        activation_list="elu",
+        use_batch_normalisation_list=False,
+        dilation_rate_list=None,
+        use_residual_list=False,
+        use_dropout_list=False,
+        method_list="convolution",
+        repair_std_deviation_list=True,
+        weights_list=None,
+        biases_list=None,
+        trafo_list=None,
+        hex_num_rotations_list=1,
+        hex_azimuth_list=None,
+        hex_zero_out_list=False,
+        float_precision=FLOAT_PRECISION,
+        name="conv_{}d_layer",
+        verbose=False,
+    ):
         """Initialize object
 
         Parameters
@@ -1484,7 +1549,7 @@ class ConvNdLayers(tf.Module):
                 pooling_ksize_list = [1, 2, 2, 2, 2, 1]
             if strides_list is None:
                 strides_list = [1, 1, 1, 1, 1, 1]
-        
+
         elif num_dims == 5:
             # 3D convolution
             if pooling_strides_list is None:
@@ -1502,7 +1567,7 @@ class ConvNdLayers(tf.Module):
                 pooling_ksize_list = [1, 2, 2, 1]
             if strides_list is None:
                 strides_list = [1, 1, 1, 1]
-                
+
         elif num_dims == 3:
             # 1D convolution
             if pooling_strides_list is None:
@@ -1513,7 +1578,7 @@ class ConvNdLayers(tf.Module):
                 strides_list = [1, 1, 1]
 
         else:
-            msg = 'Currently only 1D, 2D, 3D, or 4D supported {!r}'
+            msg = "Currently only 1D, 2D, 3D, or 4D supported {!r}"
             raise ValueError(msg.format(input_shape))
 
         num_layers = len(num_filters_list)
@@ -1526,29 +1591,38 @@ class ConvNdLayers(tf.Module):
             pooling_type_list = [pooling_type_list for i in range(num_layers)]
 
         # create pooling_strides_list
-        if (len(np.array(pooling_strides_list).shape) == 1 and
-                len(pooling_strides_list) == num_dims):
-            pooling_strides_list = [pooling_strides_list
-                                    for i in range(num_layers)]
+        if (
+            len(np.array(pooling_strides_list).shape) == 1
+            and len(pooling_strides_list) == num_dims
+        ):
+            pooling_strides_list = [
+                pooling_strides_list for i in range(num_layers)
+            ]
 
         # create pooling_ksize_list
-        if (len(np.array(pooling_ksize_list).shape) == 1 and
-                len(pooling_ksize_list) == num_dims):
-            pooling_ksize_list = [pooling_ksize_list for i in
-                                  range(num_layers)]
+        if (
+            len(np.array(pooling_ksize_list).shape) == 1
+            and len(pooling_ksize_list) == num_dims
+        ):
+            pooling_ksize_list = [
+                pooling_ksize_list for i in range(num_layers)
+            ]
 
         # create pooling_padding_list
-        if pooling_padding_list == 'SAME' or pooling_padding_list == 'VALID':
-            pooling_padding_list = [pooling_padding_list
-                                    for i in range(num_layers)]
+        if pooling_padding_list == "SAME" or pooling_padding_list == "VALID":
+            pooling_padding_list = [
+                pooling_padding_list for i in range(num_layers)
+            ]
 
         # create padding_list
-        if padding_list == 'SAME' or padding_list == 'VALID':
+        if padding_list == "SAME" or padding_list == "VALID":
             padding_list = [padding_list for i in range(num_layers)]
 
         # create strides_list
-        if (len(np.array(strides_list).shape) == 1 and
-                len(strides_list) == num_dims):
+        if (
+            len(np.array(strides_list).shape) == 1
+            and len(strides_list) == num_dims
+        ):
             strides_list = [strides_list for i in range(num_layers)]
 
         # create activation_list
@@ -1557,15 +1631,18 @@ class ConvNdLayers(tf.Module):
 
         # create batch normalisation array
         if isinstance(use_batch_normalisation_list, bool):
-            use_batch_normalisation_list = [use_batch_normalisation_list
-                                            for i in range(num_layers)]
+            use_batch_normalisation_list = [
+                use_batch_normalisation_list for i in range(num_layers)
+            ]
 
         # create dilation_rate_list
         if dilation_rate_list is None or (
-            len(np.asarray(dilation_rate_list).shape) == 1 and
-                len(dilation_rate_list) == num_dims - 2):
-            dilation_rate_list = [dilation_rate_list for i in
-                                  range(num_layers)]
+            len(np.asarray(dilation_rate_list).shape) == 1
+            and len(dilation_rate_list) == num_dims - 2
+        ):
+            dilation_rate_list = [
+                dilation_rate_list for i in range(num_layers)
+            ]
 
         # create use_residual_list
         if use_residual_list is False or use_residual_list is True:
@@ -1582,7 +1659,8 @@ class ConvNdLayers(tf.Module):
         # create repair std deviation array
         if isinstance(repair_std_deviation_list, bool):
             repair_std_deviation_list = [
-                repair_std_deviation_list for i in range(num_layers)]
+                repair_std_deviation_list for i in range(num_layers)
+            ]
 
         # create weights_list
         if weights_list is None:
@@ -1597,12 +1675,12 @@ class ConvNdLayers(tf.Module):
 
         # create hex_num_rotations_list
         if isinstance(hex_num_rotations_list, int):
-            hex_num_rotations_list = [hex_num_rotations_list
-                                      for i in range(num_layers)]
+            hex_num_rotations_list = [
+                hex_num_rotations_list for i in range(num_layers)
+            ]
 
         # create hex_azimuth_list
-        if (hex_azimuth_list is None or
-                tf.is_tensor(hex_azimuth_list)):
+        if hex_azimuth_list is None or tf.is_tensor(hex_azimuth_list):
             hex_azimuth_list = [hex_azimuth_list for i in range(num_layers)]
 
         # create hex_zero out array
@@ -1616,35 +1694,35 @@ class ConvNdLayers(tf.Module):
             if i == 0:
                 previous_layer_shape = input_shape
             else:
-                previous_layer_shape = self.layers[i-1].output_shape
+                previous_layer_shape = self.layers[i - 1].output_shape
             layer_i = ConvNdLayer(
-                    input_shape=previous_layer_shape,
-                    filter_size=filter_size_list[i],
-                    num_filters=num_filters_list[i],
-                    pooling_padding=pooling_padding_list[i],
-                    pooling_strides=pooling_strides_list[i],
-                    pooling_type=pooling_type_list[i],
-                    pooling_ksize=pooling_ksize_list[i],
-                    strides=strides_list[i],
-                    padding=padding_list[i],
-                    use_dropout=use_dropout_list[i],
-                    activation=activation_list[i],
-                    use_batch_normalisation=use_batch_normalisation_list[i],
-                    dilation_rate=dilation_rate_list[i],
-                    use_residual=use_residual_list[i],
-                    method=method_list[i],
-                    repair_std_deviation=repair_std_deviation_list[i],
-                    weights=weights_list[i],
-                    biases=biases_list[i],
-                    trafo=trafo_list[i],
-                    hex_num_rotations=hex_num_rotations_list[i],
-                    hex_azimuth=hex_azimuth_list[i],
-                    hex_zero_out=hex_zero_out_list[i],
-                    float_precision=float_precision,
-                    name='{}_{:03d}'.format(name, i),
-                    )
+                input_shape=previous_layer_shape,
+                filter_size=filter_size_list[i],
+                num_filters=num_filters_list[i],
+                pooling_padding=pooling_padding_list[i],
+                pooling_strides=pooling_strides_list[i],
+                pooling_type=pooling_type_list[i],
+                pooling_ksize=pooling_ksize_list[i],
+                strides=strides_list[i],
+                padding=padding_list[i],
+                use_dropout=use_dropout_list[i],
+                activation=activation_list[i],
+                use_batch_normalisation=use_batch_normalisation_list[i],
+                dilation_rate=dilation_rate_list[i],
+                use_residual=use_residual_list[i],
+                method=method_list[i],
+                repair_std_deviation=repair_std_deviation_list[i],
+                weights=weights_list[i],
+                biases=biases_list[i],
+                trafo=trafo_list[i],
+                hex_num_rotations=hex_num_rotations_list[i],
+                hex_azimuth=hex_azimuth_list[i],
+                hex_zero_out=hex_zero_out_list[i],
+                float_precision=float_precision,
+                name="{}_{:03d}".format(name, i),
+            )
             if verbose:
-                print('{}_{:03d}'.format(name, i), layer_i.output_shape)
+                print("{}_{:03d}".format(name, i), layer_i.output_shape)
             self.layers.append(layer_i)
 
     def __call__(self, inputs, is_training, keep_prob=None):

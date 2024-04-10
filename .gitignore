@@ -148,5 +148,3 @@ configs/user/*
 
 # exclude everything
 tfscripts.egg-info/*
-
-
