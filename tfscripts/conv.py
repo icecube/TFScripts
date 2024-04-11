@@ -16,7 +16,7 @@ import numpy as np
 import tensorflow as tf
 
 # tfscripts specific imports
-from tfscripts.weights import new_weights, new_locally_connected_weights
+from tfscripts.weights import new_locally_connected_weights
 
 # constants
 from tfscripts import FLOAT_PRECISION

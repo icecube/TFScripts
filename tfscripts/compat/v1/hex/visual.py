@@ -5,20 +5,16 @@ tfscripts.compat.v1 hexagonal convolution visualization functions
 from __future__ import division, print_function
 
 import numpy as np
-import tensorflow as tf
 import matplotlib
 
-try:
-    import _tkinter
-except ImportError:
+import importlib
+
+if not importlib.util.find_spec("_tkinter"):
     matplotlib.use("AGG")
 import matplotlib.pyplot as plt
 
 # tfscripts.compat.v1 specific imports
 from tfscripts.compat.v1.hex.rotation import get_rotated_corner_weights
-
-# constants
-from tfscripts.compat.v1 import FLOAT_PRECISION
 
 
 def print_hex_data(hex_data):

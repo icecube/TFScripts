@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=44.0"]  # Note: unfortunately need python >=2.7
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,7 +13,7 @@ authors = [
 maintainers = [
     { name = "Mirco Huennefeld", email = "mirco.huennefeld@tu-dortmund.de" },
 ]
-requires-python = ">=3.7"
+requires-python = ">=2.7"  # Note: unfortunately need python >=2.7
 
 dependencies = ["numpy", "matplotlib", "tensorflow"]
 
@@ -48,7 +48,10 @@ version = {attr = "tfscripts.__version__"}
 
 [tool.black]
 line-length = 79
-target-version = ["py38"]
+# technically, black does not support python2.
+# This is all python versions black knows of and gets
+# rid of the trailing comma bug
+target-version = ["py33", "py34", "py35", "py36", "py37", "py38", "py39", "py310", "py311"]
 
 [tool.ruff]
 # select = ["ALL"]
@@ -65,7 +68,7 @@ ignore = [
     "T20",    # flake8-print
     "TCH",    # flake8-type-checking
     "S101",   # assert-used
-    "F401",   # imported but unused. NOTE: sooner or later, we should not ignore this
+    "COM812", # trailing comma to not insert after **kwargs, which is a syntax error prior to py3.6
     ]
 line-length = 79
 target-version = "py38"
