@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 # tfscripts specific imports
-from tfscripts.weights import new_weights, new_biases, new_kernel_weights
+from tfscripts.weights import new_weights, new_biases
 from tfscripts.weights import new_locally_connected_weights
 from tfscripts import conv
 from tfscripts import core
@@ -361,7 +361,6 @@ class ConvNdLayer(tf.Module):
         # Create new weights aka. filters with the given shape.
         if method.lower() == "convolution":
             if weights is None:
-                # weights = new_kernel_weights(shape=shape)
                 weights = new_weights(
                     shape=shape, float_precision=float_precision
                 )

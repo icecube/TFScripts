@@ -11,7 +11,6 @@ import tensorflow as tf
 from tfscripts.compat.v1.weights import (
     new_weights,
     new_biases,
-    new_kernel_weights,
 )
 from tfscripts.compat.v1 import conv
 from tfscripts.compat.v1 import core
@@ -343,7 +342,6 @@ def new_conv_nd_layer(
     # Create new weights aka. filters with the given shape.
     if method.lower() == "convolution":
         if weights is None:
-            # weights = new_kernel_weights(shape=shape)
             weights = new_weights(shape=shape)
 
         # Create new biases, one for each filter.

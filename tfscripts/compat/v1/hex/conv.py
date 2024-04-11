@@ -9,14 +9,12 @@ ToDo:
 
 from __future__ import division, print_function
 
-import numpy as np
 import tensorflow as tf
 
 # tfscripts.compat.v1 specific imports
 from tfscripts.compat.v1.weights import (
     new_weights,
     new_biases,
-    new_kernel_weights,
 )
 from tfscripts.compat.v1.hex.visual import print_hex_data
 from tfscripts.compat.v1.hex import rotation

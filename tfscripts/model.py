@@ -1,5 +1,4 @@
 from copy import deepcopy
-import json
 import numpy as np
 import tensorflow as tf
 
@@ -272,7 +271,7 @@ class DenseNNGaussian(DenseNN):
         use_nth_fc_layer_as_input=None,
         min_sigma_value=1e-3,
         verbose=False,
-        **kwargs,
+        **kwargs
     ):
         """Gaussian Uncertainty NN (Dense NN Model)
 

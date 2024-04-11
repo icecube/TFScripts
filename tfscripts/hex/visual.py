@@ -5,12 +5,11 @@ tfscripts hexagonal convolution visualization functions
 from __future__ import division, print_function
 
 import numpy as np
-import tensorflow as tf
 import matplotlib
 
-try:
-    import _tkinter
-except ImportError:
+import importlib
+
+if not importlib.util.find_spec("_tkinter"):
     matplotlib.use("AGG")
 import matplotlib.pyplot as plt
 
