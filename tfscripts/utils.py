@@ -11,6 +11,20 @@ import tensorflow as tf
 from tfscripts import FLOAT_PRECISION
 
 
+class SeedCounter(object):
+    """A simple seed counter class for generating seeds."""
+
+    def __init__(self, seed=0):
+        self._seed_state = seed
+
+    def __call__(self):
+        if self._seed_state is None:
+            return None
+        else:
+            self._seed_state += 1
+            return self._seed_state
+
+
 def count_parameters(var_list=None):
     """Count number of trainable parameters
 

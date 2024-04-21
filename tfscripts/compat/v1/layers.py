@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 # tfscripts.compat.v1 specific imports
+from tfscripts.utils import SeedCounter
 from tfscripts.compat.v1.weights import (
     new_weights,
     new_biases,
@@ -146,6 +147,7 @@ def new_conv_nd_layer(
     hex_num_rotations=1,
     hex_azimuth=None,
     hex_zero_out=False,
+    seed=None,
 ):
     """Helper-function for creating a new n-dim Convolutional Layer
 
@@ -276,6 +278,8 @@ def new_conv_nd_layer(
         If True, elements in result tensor which are not part of hexagon or
         IceCube strings (if shape in x and y dimensions is 10x10), will be
         set to zero.
+    seed : None or int, optional
+        The seed to be used for random initialisation of weights.
 
     Returns
     -------
@@ -292,6 +296,8 @@ def new_conv_nd_layer(
     ValueError
         Description
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
 
     # check dimension of input
     num_dims = len(input.shape) - 2
@@ -342,11 +348,11 @@ def new_conv_nd_layer(
     # Create new weights aka. filters with the given shape.
     if method.lower() == "convolution":
         if weights is None:
-            weights = new_weights(shape=shape)
+            weights = new_weights(shape=shape, seed=cnt())
 
         # Create new biases, one for each filter.
         if biases is None:
-            biases = new_biases(length=num_filters)
+            biases = new_biases(length=num_filters, seed=cnt())
 
     # -------------------
     # Perform convolution
@@ -385,6 +391,7 @@ def new_conv_nd_layer(
                 dilation_rate=dilation_rate,
                 zero_out=hex_zero_out,
                 kernel=weights,
+                seed=cnt(),
             )
         elif num_dims == 4:
             layer, weights = hx.conv_hex4d(
@@ -398,11 +405,14 @@ def new_conv_nd_layer(
                 dilation_rate=dilation_rate,
                 zero_out=hex_zero_out,
                 kernel=weights,
+                seed=cnt(),
             )
 
         # Create new biases, one for each filter.
         if biases is None:
-            biases = new_biases(length=num_filters * hex_num_rotations)
+            biases = new_biases(
+                length=num_filters * hex_num_rotations, seed=cnt()
+            )
 
     # -------------------
     # locally connected
@@ -423,6 +433,7 @@ def new_conv_nd_layer(
                 strides=strides[1:-1],
                 padding=padding,
                 dilation_rate=dilation_rate,
+                seed=cnt(),
             )
         elif num_dims == 3:
             layer, weights = conv.locally_connected_3d(
@@ -432,12 +443,13 @@ def new_conv_nd_layer(
                 strides=strides[1:-1],
                 padding=padding,
                 dilation_rate=dilation_rate,
+                seed=cnt(),
             )
         elif num_dims == 4:
             raise NotImplementedError("4D locally connected not implemented!")
 
         # Create new biases, one for each filter and position
-        biases = new_weights(shape=layer.get_shape().as_list()[1:])
+        biases = new_weights(shape=layer.get_shape().as_list()[1:], seed=cnt())
 
     # -------------------
     # local trafo
@@ -481,7 +493,7 @@ def new_conv_nd_layer(
             raise NotImplementedError("4D dynamic_convolution not implemented")
 
         if biases is None:
-            biases = new_biases(length=num_filters)
+            biases = new_biases(length=num_filters, seed=cnt())
 
     else:
         raise ValueError("Unknown method: {!r}".format(method))
@@ -524,12 +536,18 @@ def new_conv_nd_layer(
 
     # Apply activation and batch normalisation
     layer = core.activation(
-        layer, activation, use_batch_normalisation, is_training
+        layer,
+        activation,
+        use_batch_normalisation,
+        is_training,
+        seed=cnt(),
     )
 
     # Use as Residual
     if use_residual:
-        layer = core.add_residual(input=input, residual=layer, strides=strides)
+        layer = core.add_residual(
+            input=input, residual=layer, strides=strides, seed=cnt()
+        )
 
     # Use pooling to down-sample the image resolution?
     if num_dims == 2:
@@ -588,6 +606,7 @@ def new_fc_layer(
     weights=None,
     biases=None,
     max_out_size=None,
+    seed=None,
 ):
     """
     Helper-function for creating a new Fully-Connected Layer
@@ -625,6 +644,8 @@ def new_fc_layer(
     max_out_size : None or int, optional
         The max_out_size for the layer.
         If None, no max_out is used in the layer.
+    seed : None or int, optional
+        The seed to be used for random initialisation of weights.
 
     Returns
     -------
@@ -636,9 +657,9 @@ def new_fc_layer(
 
     # Create new weights and biases.
     if weights is None:
-        weights = new_weights(shape=[num_inputs, num_outputs])
+        weights = new_weights(shape=[num_inputs, num_outputs], seed=seed)
     if biases is None:
-        biases = new_biases(length=num_outputs)
+        biases = new_biases(length=num_outputs, seed=seed)
 
     # Calculate the layer as the matrix multiplication of
     # the input and weights, and then add the bias-values.
@@ -651,7 +672,11 @@ def new_fc_layer(
 
     # Apply activation and batch normalisation
     layer = core.activation(
-        layer, activation, use_batch_normalisation, is_training
+        layer,
+        activation,
+        use_batch_normalisation,
+        is_training,
+        seed=seed,
     )
 
     if max_out_size is not None:
@@ -678,6 +703,7 @@ def new_fc_layer(
             input=input,
             residual=layer,
             strides=res_strides,
+            seed=seed,
         )
 
     if use_dropout:
@@ -698,6 +724,7 @@ def new_channel_wise_fc_layer(
     weights=None,
     biases=None,
     max_out_size=None,
+    seed=None,
 ):
     """
     Helper-function for creating a new channel wise Fully-Connected Layer
@@ -735,6 +762,8 @@ def new_channel_wise_fc_layer(
     max_out_size : None or int, optional
         The max_out_size for the layer.
         If None, no max_out is used in the layer.
+    seed : None or int, optional
+        The seed to be used for random initialisation of weights.
 
     Returns
     -------
@@ -759,9 +788,11 @@ def new_channel_wise_fc_layer(
 
     # Create new weights and biases.
     if weights is None:
-        weights = new_weights(shape=[num_channels, num_inputs, num_outputs])
+        weights = new_weights(
+            shape=[num_channels, num_inputs, num_outputs], seed=seed
+        )
     if biases is None:
-        biases = new_weights(shape=[num_outputs, num_channels])
+        biases = new_weights(shape=[num_outputs, num_channels], seed=seed)
 
     # Calculate the layer as the matrix multiplication of
     # the input and weights, and then add the bias-values.
@@ -777,7 +808,11 @@ def new_channel_wise_fc_layer(
 
     # Apply activation and batch normalisation
     layer = core.activation(
-        layer, activation, use_batch_normalisation, is_training
+        layer,
+        activation,
+        use_batch_normalisation,
+        is_training,
+        seed=seed,
     )
 
     # Use as Residual
@@ -785,7 +820,9 @@ def new_channel_wise_fc_layer(
         # convert to [batch, num_channel, num_outputs]
         layer = tf.transpose(a=layer, perm=[0, 2, 1])
         layer = core.add_residual(
-            input=tf.transpose(a=input, perm=[0, 2, 1]), residual=layer
+            input=tf.transpose(a=input, perm=[0, 2, 1]),
+            residual=layer,
+            seed=seed,
         )
         # convert back to [batch, num_outputs, num_channel]
         layer = tf.transpose(a=layer, perm=[0, 2, 1])
@@ -815,6 +852,7 @@ def new_fc_layers(
     weights_list=None,
     biases_list=None,
     max_out_size_list=None,
+    seed=None,
     verbose=True,
 ):
     """
@@ -869,6 +907,9 @@ def new_fc_layers(
         If None, no max_out is used in the corresponding layer.
         If only a single max_out_size is given, it will be used for all layers.
 
+    seed : None or int, optional
+        The seed to be used for random initialisation of weights.
+
     verbose : bool, optional
         If true, more verbose output is printed.
 
@@ -919,6 +960,9 @@ def new_fc_layers(
             "Input dimension is wrong: {}".format(input.get_shape().as_list())
         )
 
+    # create seed counter
+    cnt = SeedCounter(seed)
+
     # create layers:
     layers = []
     weights = []
@@ -940,6 +984,7 @@ def new_fc_layers(
             weights=weights_list[i],
             biases=biases_list[i],
             max_out_size=max_out_size_list[i],
+            seed=cnt(),
         )
         if verbose:
             print("fc_layer_{:03d}".format(i), layer_i)
@@ -974,6 +1019,7 @@ def new_conv_nd_layers(
     hex_num_rotations_list=1,
     hex_azimuth_list=None,
     hex_zero_out_list=False,
+    seed=None,
     name="conv_{}d_layer",
     verbose=True,
 ):
@@ -1128,6 +1174,9 @@ def new_conv_nd_layers(
         set to zero.
         If only one boolean is given, it will apply to all layers.
 
+    seed : None or int, optional
+        The seed to be used for random initialisation of weights.
+
     name : str, optional
         An optional name for the layers.
 
@@ -1276,6 +1325,9 @@ def new_conv_nd_layers(
         hex_zero_out_list = [hex_zero_out_list for i in range(num_layers)]
     # ---------------
 
+    # create seed counter
+    cnt = SeedCounter(seed)
+
     # create layers:
     layers = []
     weights = []
@@ -1309,6 +1361,7 @@ def new_conv_nd_layers(
             hex_num_rotations=hex_num_rotations_list[i],
             hex_azimuth=hex_azimuth_list[i],
             hex_zero_out=hex_zero_out_list[i],
+            seed=cnt(),
         )
         if verbose:
             print("{}_{:02d}".format(name, i), layer_i)

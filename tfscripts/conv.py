@@ -247,6 +247,7 @@ class LocallyConnected1d(tf.Module):
         padding="SAME",
         dilation_rate=None,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -275,6 +276,8 @@ class LocallyConnected1d(tf.Module):
             defines dilattion rate to be used
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
 
@@ -335,6 +338,7 @@ class LocallyConnected1d(tf.Module):
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0],
                     float_precision=float_precision,
+                    seed=seed,
                 )
 
             else:
@@ -342,6 +346,7 @@ class LocallyConnected1d(tf.Module):
                     shape=kernel_shape,
                     shared_axes=[0],
                     float_precision=float_precision,
+                    seed=seed,
                 )
 
         self.output_shape = output_shape
@@ -465,6 +470,7 @@ class LocallyConnected2d(tf.Module):
         padding="SAME",
         dilation_rate=None,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -493,6 +499,8 @@ class LocallyConnected2d(tf.Module):
             defines dilattion rate to be used
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
 
@@ -553,6 +561,7 @@ class LocallyConnected2d(tf.Module):
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0, 1],
                     float_precision=float_precision,
+                    seed=seed,
                 )
 
             else:
@@ -560,6 +569,7 @@ class LocallyConnected2d(tf.Module):
                     shape=kernel_shape,
                     shared_axes=[0],
                     float_precision=float_precision,
+                    seed=seed,
                 )
 
         self.output_shape = output_shape
@@ -708,6 +718,7 @@ class LocallyConnected3d(tf.Module):
         padding="SAME",
         dilation_rate=None,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -733,6 +744,8 @@ class LocallyConnected3d(tf.Module):
             defines dilattion rate to be used
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
         """
@@ -788,6 +801,7 @@ class LocallyConnected3d(tf.Module):
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0, 1, 2],
                     float_precision=float_precision,
+                    seed=seed,
                 )
 
             else:
@@ -795,6 +809,7 @@ class LocallyConnected3d(tf.Module):
                     shape=kernel_shape,
                     shared_axes=[0],
                     float_precision=float_precision,
+                    seed=seed,
                 )
 
         self.output_shape = output_shape

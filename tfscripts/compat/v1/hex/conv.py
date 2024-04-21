@@ -12,6 +12,7 @@ from __future__ import division, print_function
 import tensorflow as tf
 
 # tfscripts.compat.v1 specific imports
+from tfscripts.utils import SeedCounter
 from tfscripts.compat.v1.weights import (
     new_weights,
     new_biases,
@@ -74,7 +75,7 @@ def hex_distance(h1, h2):
     return (abs(a1 - a2) + abs(b1 - b2) + abs(c1 - c2)) / 2
 
 
-def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
+def get_hex_kernel(filter_size, print_kernel=False, get_ones=False, seed=None):
     """Get hexagonal convolution kernel
 
     Create Weights for a hexagonal kernel.
@@ -126,12 +127,13 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
             1 represents a trainable Tensor of shape filter_size[2:]
             This can be used to verify the shape of the hex kernel
       False: do not print
-
     get_ones : bool, optional
         If True, returns constant ones for elements in hexagon.
         If False, return trainable tf.tensor for elements in hexagon.
         In both cases, constant zeros are returned for elements outside of
         hexagon.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -147,6 +149,9 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
     ValueError
         Description
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
+
     k = filter_size[0]
     x = filter_size[1]
 
@@ -180,7 +185,7 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
                     if get_ones:
                         weights = ones
                     else:
-                        weights = new_weights(filter_size[2:])
+                        weights = new_weights(filter_size[2:], seed=cnt())
                     test_hex_dict[(a, b)] = 1
 
             # -------------------------
@@ -219,7 +224,7 @@ def get_hex_kernel(filter_size, print_kernel=False, get_ones=False):
                     if get_ones:
                         weights = ones
                     else:
-                        weights = new_weights(filter_size[2:])
+                        weights = new_weights(filter_size[2:], seed=cnt())
                     test_hex_dict[(a, b)] = 1
                 else:
                     weights = zeros
@@ -244,6 +249,7 @@ def conv_hex(
     zero_out=False,
     kernel=None,
     azimuth=None,
+    seed=None,
 ):
     """Convolve a hex2d or hex3d layer (2d hex + 1d cartesian)
 
@@ -310,6 +316,8 @@ def conv_hex(
     azimuth : float or scalar float tf.Tensor
         Hexagonal kernel is turned by the angle 'azimuth' [given in degrees]
         in counterclockwise direction
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -331,16 +339,21 @@ def conv_hex(
     if kernel is None:
         if azimuth is not None and filter_size[:2] != [1, 0]:
             kernel = rotation.get_dynamic_rotation_hex_kernel(
-                filter_size + [num_channels, num_filters], azimuth
+                filter_size + [num_channels, num_filters],
+                azimuth,
+                seed=seed,
             )
         else:
             if num_rotations > 1:
                 kernel = rotation.get_rotated_hex_kernel(
-                    filter_size + [num_channels, num_filters], num_rotations
+                    filter_size + [num_channels, num_filters],
+                    num_rotations,
+                    seed=seed,
                 )
             else:
                 kernel = get_hex_kernel(
-                    filter_size + [num_channels, num_filters]
+                    filter_size + [num_channels, num_filters],
+                    seed=seed,
                 )
 
     if azimuth is not None and filter_size[:2] != [1, 0]:
@@ -368,7 +381,9 @@ def conv_hex(
             print("Assuming IceCube shape for layer", result)
 
             zero_out_matrix = get_icecube_kernel(
-                result.get_shape().as_list()[3:], get_ones=True
+                result.get_shape().as_list()[3:],
+                get_ones=True,
+                seed=seed,
             )
             result = result * zero_out_matrix
 
@@ -382,6 +397,7 @@ def conv_hex(
                     num_filters * num_rotations,
                 ],
                 get_ones=True,
+                seed=seed,
             )
             if result.get_shape()[1:] == zero_out_matrix.get_shape():
                 result = result * zero_out_matrix
@@ -415,6 +431,7 @@ def conv_hex4d(
     azimuth=None,
     stack_axis=None,
     zero_out=False,
+    seed=None,
 ):
     """Convolve a hex4d layer (2d hex + 1d cartesian + 1d time)
 
@@ -486,6 +503,8 @@ def conv_hex4d(
         If True, elements in result tensor which are not part of hexagon or
         IceCube strings (if shape in x and y dimensions is 10x10), will be
         set to zero.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -502,16 +521,21 @@ def conv_hex4d(
         num_in_channels = input_data.get_shape().as_list()[5]
         if azimuth is not None:
             kernel = rotation.get_dynamic_rotation_hex_kernel(
-                filter_size + [num_in_channels, num_filters], azimuth
+                filter_size + [num_in_channels, num_filters],
+                azimuth,
+                seed=seed,
             )
         else:
             if num_rotations > 1:
                 kernel = rotation.get_rotated_hex_kernel(
-                    filter_size + [num_in_channels, num_filters], num_rotations
+                    filter_size + [num_in_channels, num_filters],
+                    num_rotations,
+                    seed=seed,
                 )
             else:
                 kernel = get_hex_kernel(
-                    filter_size + [num_in_channels, num_filters]
+                    filter_size + [num_in_channels, num_filters],
+                    seed=seed,
                 )
 
     # convolve with tf conv4d_stacked
@@ -535,6 +559,7 @@ def conv_hex4d(
                 num_filters * num_rotations,
             ],
             get_ones=True,
+            seed=seed,
         )
 
         if result.get_shape()[1:] == zero_out_matrix.get_shape():
@@ -557,6 +582,7 @@ def create_conv_hex_layers_weights(
     num_filters_list,
     num_rotations_list=1,
     azimuth_list=None,
+    seed=None,
 ):
     """Create weights and biases for conv hex n-dimensional layers with n >= 2
 
@@ -612,12 +638,16 @@ def create_conv_hex_layers_weights(
         If only a single azimuth angle is given, the same rotation is used for
         all layers.
         If azimuth is None, the hexagonal kernel is not rotated.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
     list of tf.Tensor, list of tf.Tensor
         Returns the list of weight and bias tensors for each layer
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
 
     # create num_rotations_list
     if isinstance(num_rotations_list, int):
@@ -638,21 +668,27 @@ def create_conv_hex_layers_weights(
     ):
         if azimuth is not None:
             kernel = rotation.get_dynamic_rotation_hex_kernel(
-                filter_size, azimuth
+                filter_size,
+                azimuth,
+                seed=cnt(),
             )
         else:
             if num_rotations > 1:
                 kernel = rotation.get_rotated_hex_kernel(
                     filter_size + [num_input_channels, num_filters],
                     num_rotations,
+                    seed=cnt(),
                 )
             else:
                 kernel = get_hex_kernel(
-                    filter_size + [num_input_channels, num_filters]
+                    filter_size + [num_input_channels, num_filters],
+                    seed=cnt(),
                 )
 
         weights_list.append(kernel)
-        biases_list.append(new_biases(length=num_filters * num_rotations))
+        biases_list.append(
+            new_biases(length=num_filters * num_rotations, seed=cnt())
+        )
         num_input_channels = num_filters
 
     return weights_list, biases_list

@@ -17,6 +17,7 @@ class DenseNN(tf.keras.Model):
         use_batch_normalisation_list=False,
         use_residual_list=False,
         dtype="float32",
+        seed=None,
         verbose=False,
     ):
         """Dense NN Model
@@ -46,6 +47,8 @@ class DenseNN(tf.keras.Model):
             layers.
         dtype : str, optional
             The float precision type.
+        seed : int, optional
+            Seed for the random number generator.
         verbose : bool, optional
             If True, print additional information during setup.
         """
@@ -57,6 +60,7 @@ class DenseNN(tf.keras.Model):
         self.activation_list = activation_list
         self.use_batch_normalisation_list = use_batch_normalisation_list
         self.use_residual_list = use_residual_list
+        self.seed = seed
 
         tf_dtype = getattr(tf, dtype)
 
@@ -105,6 +109,7 @@ class DenseNN(tf.keras.Model):
             biases_list=None,
             max_out_size_list=None,
             float_precision=tf_dtype,
+            seed=seed,
             name="fc_layer",
             verbose=verbose,
         )
@@ -251,6 +256,7 @@ class DenseNN(tf.keras.Model):
             "use_batch_normalisation_list": self.use_batch_normalisation_list,
             "use_residual_list": self.use_residual_list,
             "dtype": self.dtype,
+            "seed": self.seed,
         }
         for key, value in config.items():
             if isinstance(value, (list, tuple)):
@@ -270,6 +276,7 @@ class DenseNNGaussian(DenseNN):
         use_residual_list_unc=False,
         use_nth_fc_layer_as_input=None,
         min_sigma_value=1e-3,
+        seed=None,
         verbose=False,
         **kwargs
     ):
@@ -308,10 +315,12 @@ class DenseNNGaussian(DenseNN):
         min_sigma_value : float
             The lower bound for the uncertainty estimation.
             This is used to ensure robustness of the training.
+        seed : int, optional
+            Seed for the random number generator.
         **kwargs
             Keyword arguments that are passed on to DenseNN initializer.
         """
-        super().__init__(verbose=verbose, **kwargs)
+        super().__init__(seed=seed, verbose=verbose, **kwargs)
 
         self.fc_sizes_unc = fc_sizes_unc
         self.use_dropout_list_unc = use_dropout_list_unc
@@ -343,6 +352,7 @@ class DenseNNGaussian(DenseNN):
             biases_list=None,
             max_out_size_list=None,
             float_precision=getattr(tf, self.dtype),
+            seed=seed,
             name="fc_layer_unc",
             verbose=verbose,
         )
