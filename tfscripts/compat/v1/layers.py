@@ -589,7 +589,7 @@ def new_conv_nd_layer(
         raise NotImplementedError("Only supported 2d, 3d, 4d!")
 
     if use_dropout:
-        layer = tf.nn.dropout(layer, rate=1 - (keep_prob))
+        layer = tf.nn.dropout(layer, rate=1 - (keep_prob), seed=cnt())
 
     return layer, weights, biases
 
@@ -707,7 +707,7 @@ def new_fc_layer(
         )
 
     if use_dropout:
-        layer = tf.nn.dropout(layer, rate=1 - (keep_prob))
+        layer = tf.nn.dropout(layer, rate=1 - (keep_prob), seed=seed)
 
     return layer, weights, biases
 
@@ -835,7 +835,7 @@ def new_channel_wise_fc_layer(
         )
 
     if use_dropout:
-        layer = tf.nn.dropout(layer, rate=1 - (keep_prob))
+        layer = tf.nn.dropout(layer, rate=1 - (keep_prob), seed=seed)
 
     return layer, weights, biases
 

@@ -603,6 +603,7 @@ class ConvNdLayer(tf.Module):
         self.method = method
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
+        self.seed = seed
 
         # get shape of output
         # todo: figure out better way to obtain this
@@ -717,7 +718,7 @@ class ConvNdLayer(tf.Module):
         layer = self._apply_pooling(layer)
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
 
         return layer
 
@@ -911,6 +912,7 @@ class FCLayer(tf.Module):
         self.use_dropout = use_dropout
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
+        self.seed = seed
 
     def __call__(self, inputs, is_training, keep_prob):
         """Apply Module.
@@ -979,7 +981,7 @@ class FCLayer(tf.Module):
             layer = self.residual_add(input=inputs, residual=layer)
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
 
         return layer
 
@@ -1123,6 +1125,7 @@ class ChannelWiseFCLayer(tf.Module):
         self.use_dropout = use_dropout
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
+        self.seed = seed
 
     def __call__(self, inputs, is_training, keep_prob):
         """Apply Module.
@@ -1205,7 +1208,7 @@ class ChannelWiseFCLayer(tf.Module):
             )
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
 
         return layer
 
