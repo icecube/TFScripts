@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 # tfscripts specific imports
+from tfscripts.utils import SeedCounter
 from tfscripts.weights import new_weights, new_biases
 from tfscripts.weights import new_locally_connected_weights
 from tfscripts import conv
@@ -160,6 +161,7 @@ class ConvNdLayer(tf.Module):
         hex_azimuth=None,
         hex_zero_out=False,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -291,6 +293,8 @@ class ConvNdLayer(tf.Module):
             set to zero.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : None or int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
 
@@ -302,6 +306,9 @@ class ConvNdLayer(tf.Module):
             Description
         """
         super(ConvNdLayer, self).__init__(name=name)
+
+        # create seed counter
+        cnt = SeedCounter(seed)
 
         if isinstance(input_shape, tf.TensorShape):
             input_shape = input_shape.as_list()
@@ -362,13 +369,17 @@ class ConvNdLayer(tf.Module):
         if method.lower() == "convolution":
             if weights is None:
                 weights = new_weights(
-                    shape=shape, float_precision=float_precision
+                    shape=shape,
+                    float_precision=float_precision,
+                    seed=cnt(),
                 )
 
             # Create new biases, one for each filter.
             if biases is None:
                 biases = new_biases(
-                    length=num_filters, float_precision=float_precision
+                    length=num_filters,
+                    float_precision=float_precision,
+                    seed=cnt(),
                 )
 
             if num_dims == 1 or num_dims == 2 or num_dims == 3:
@@ -418,6 +429,7 @@ class ConvNdLayer(tf.Module):
                     kernel=weights,
                     var_list=var_list,
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
             elif num_dims == 4:
                 self.conv_layer = hx.ConvHex4d(
@@ -433,6 +445,7 @@ class ConvNdLayer(tf.Module):
                     kernel=weights,
                     var_list=var_list,
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
 
             # Create new biases, one for each filter.
@@ -440,6 +453,7 @@ class ConvNdLayer(tf.Module):
                 biases = new_biases(
                     length=num_filters * hex_num_rotations,
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
 
         # -------------------
@@ -457,6 +471,7 @@ class ConvNdLayer(tf.Module):
                     padding=padding,
                     dilation_rate=dilation_rate,
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
             elif num_dims == 2:
                 self.conv_layer = conv.LocallyConnected2d(
@@ -468,6 +483,7 @@ class ConvNdLayer(tf.Module):
                     padding=padding,
                     dilation_rate=dilation_rate,
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
             elif num_dims == 3:
                 self.conv_layer = conv.LocallyConnected3d(
@@ -479,6 +495,7 @@ class ConvNdLayer(tf.Module):
                     padding=padding,
                     dilation_rate=dilation_rate,
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
             elif num_dims == 4:
                 raise NotImplementedError(
@@ -491,6 +508,7 @@ class ConvNdLayer(tf.Module):
                     shape=self.conv_layer.output_shape[1:],
                     shared_axes=[i for i in range(num_dims)],
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
 
         # -------------------
@@ -548,7 +566,9 @@ class ConvNdLayer(tf.Module):
 
             if biases is None:
                 biases = new_biases(
-                    length=num_filters, float_precision=float_precision
+                    length=num_filters,
+                    float_precision=float_precision,
+                    seed=cnt(),
                 )
 
         else:
@@ -567,6 +587,7 @@ class ConvNdLayer(tf.Module):
             input_shape=conv_layer_output.shape,
             use_batch_normalisation=use_batch_normalisation,
             float_precision=float_precision,
+            seed=cnt(),
         )
 
         # assign and keep track of settings
@@ -582,6 +603,7 @@ class ConvNdLayer(tf.Module):
         self.method = method
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
+        self.seed = seed
 
         # get shape of output
         # todo: figure out better way to obtain this
@@ -595,6 +617,7 @@ class ConvNdLayer(tf.Module):
                 residual_shape=self.output_shape,
                 strides=strides,
                 float_precision=float_precision,
+                seed=cnt(),
             )
 
     def __call__(self, inputs, is_training, keep_prob=None):
@@ -695,7 +718,7 @@ class ConvNdLayer(tf.Module):
         layer = self._apply_pooling(layer)
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
 
         return layer
 
@@ -777,6 +800,7 @@ class FCLayer(tf.Module):
         max_out_size=None,
         repair_std_deviation=True,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -814,6 +838,8 @@ class FCLayer(tf.Module):
             a std deviation of 1.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : None or int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
 
@@ -830,10 +856,13 @@ class FCLayer(tf.Module):
             weights = new_weights(
                 shape=[num_inputs, num_outputs],
                 float_precision=float_precision,
+                seed=seed,
             )
         if biases is None:
             biases = new_biases(
-                length=num_outputs, float_precision=float_precision
+                length=num_outputs,
+                float_precision=float_precision,
+                seed=seed,
             )
 
         self.biases = biases
@@ -844,6 +873,7 @@ class FCLayer(tf.Module):
             input_shape=[None, num_outputs],
             use_batch_normalisation=use_batch_normalisation,
             float_precision=float_precision,
+            seed=seed,
         )
 
         # calculate residual strides
@@ -872,6 +902,7 @@ class FCLayer(tf.Module):
                 residual_shape=output_shape,
                 strides=res_strides,
                 float_precision=float_precision,
+                seed=seed,
             )
 
         self.output_shape = output_shape
@@ -881,6 +912,7 @@ class FCLayer(tf.Module):
         self.use_dropout = use_dropout
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
+        self.seed = seed
 
     def __call__(self, inputs, is_training, keep_prob):
         """Apply Module.
@@ -949,7 +981,7 @@ class FCLayer(tf.Module):
             layer = self.residual_add(input=inputs, residual=layer)
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
 
         return layer
 
@@ -974,6 +1006,7 @@ class ChannelWiseFCLayer(tf.Module):
         max_out_size=None,
         repair_std_deviation=True,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -1011,6 +1044,8 @@ class ChannelWiseFCLayer(tf.Module):
             a std deviation of 1.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : None or int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
 
@@ -1033,11 +1068,13 @@ class ChannelWiseFCLayer(tf.Module):
             weights = new_weights(
                 shape=[num_channels, num_inputs, num_outputs],
                 float_precision=float_precision,
+                seed=seed,
             )
         if biases is None:
             biases = new_weights(
                 shape=[num_outputs, num_channels],
                 float_precision=float_precision,
+                seed=seed,
             )
 
         self.biases = biases
@@ -1048,6 +1085,7 @@ class ChannelWiseFCLayer(tf.Module):
             input_shape=transpose_shape,
             use_batch_normalisation=use_batch_normalisation,
             float_precision=float_precision,
+            seed=seed,
         )
 
         # # calculate residual strides
@@ -1071,6 +1109,7 @@ class ChannelWiseFCLayer(tf.Module):
                 residual_shape=[None, num_channels, num_outputs],
                 strides=res_strides,
                 float_precision=float_precision,
+                seed=seed,
             )
 
         # calculate output shape
@@ -1086,6 +1125,7 @@ class ChannelWiseFCLayer(tf.Module):
         self.use_dropout = use_dropout
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
+        self.seed = seed
 
     def __call__(self, inputs, is_training, keep_prob):
         """Apply Module.
@@ -1168,7 +1208,7 @@ class ChannelWiseFCLayer(tf.Module):
             )
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
 
         return layer
 
@@ -1189,6 +1229,7 @@ class FCLayers(tf.Module):
         max_out_size_list=None,
         repair_std_deviation_list=True,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name="fc_layer",
         verbose=False,
     ):
@@ -1238,6 +1279,8 @@ class FCLayers(tf.Module):
             layers.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : None or int, optional
+            Seed for the random number generator.
         name : str, optional
             An optional name for the layers.
 
@@ -1296,6 +1339,9 @@ class FCLayers(tf.Module):
                 "Input dimension is wrong: {}".format(input_shape)
             )
 
+        # create seed counter
+        cnt = SeedCounter(seed)
+
         # create layers:
         self.layers = []
         for i in range(num_layers):
@@ -1315,6 +1361,7 @@ class FCLayers(tf.Module):
                 max_out_size=max_out_size_list[i],
                 repair_std_deviation=repair_std_deviation_list[i],
                 float_precision=float_precision,
+                seed=cnt(),
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:
@@ -1378,6 +1425,7 @@ class ConvNdLayers(tf.Module):
         hex_azimuth_list=None,
         hex_zero_out_list=False,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name="conv_{}d_layer",
         verbose=False,
     ):
@@ -1520,7 +1568,9 @@ class ConvNdLayers(tf.Module):
             set to zero.
             If only one boolean is given, it will apply to all layers.
         float_precision : TYPE, optional
-            Description
+            The tensorflow dtype describing the float precision to use.
+        seed : None, optional
+            Seed for the random number generator.
         name : str, optional
             An optional name for the layers.
         verbose : bool, optional
@@ -1531,6 +1581,9 @@ class ConvNdLayers(tf.Module):
         ValueError
             Description
         """
+        # create seed counter
+        cnt = SeedCounter(seed)
+
         num_dims = len(input_shape)
         name = name.format(num_dims - 2)
 
@@ -1718,6 +1771,7 @@ class ConvNdLayers(tf.Module):
                 hex_azimuth=hex_azimuth_list[i],
                 hex_zero_out=hex_zero_out_list[i],
                 float_precision=float_precision,
+                seed=cnt(),
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:

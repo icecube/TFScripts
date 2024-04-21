@@ -10,11 +10,16 @@ import numpy as np
 import tensorflow as tf
 
 # constants
+from tfscripts.utils import SeedCounter
 from tfscripts import FLOAT_PRECISION
 
 
 def new_weights(
-    shape, stddev=1.0, name="weights", float_precision=FLOAT_PRECISION
+    shape,
+    stddev=1.0,
+    name="weights",
+    float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """Helper-function to create new weights
 
@@ -29,6 +34,8 @@ def new_weights(
         The name of the tensor.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -37,7 +44,10 @@ def new_weights(
     """
     return tf.Variable(
         tf.random.truncated_normal(
-            shape, stddev=stddev, dtype=float_precision
+            shape,
+            stddev=stddev,
+            dtype=float_precision,
+            seed=seed,
         ),
         name=name,
         dtype=float_precision,
@@ -50,6 +60,7 @@ def new_locally_connected_weights(
     name="weights",
     shared_axes=None,
     float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """Helper-function to create new weights
 
@@ -66,6 +77,8 @@ def new_locally_connected_weights(
         A list of axes over which the same initial values will be chosen.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -87,7 +100,10 @@ def new_locally_connected_weights(
 
     # sample initial values
     initial_value = tf.random.truncated_normal(
-        shape_init, stddev=stddev, dtype=float_precision
+        shape_init,
+        stddev=stddev,
+        dtype=float_precision,
+        seed=seed,
     )
 
     # tile over shared axes
@@ -97,7 +113,11 @@ def new_locally_connected_weights(
 
 
 def new_kernel_weights(
-    shape, stddev=0.01, name="weights", float_precision=FLOAT_PRECISION
+    shape,
+    stddev=0.01,
+    name="weights",
+    float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """
     Get weights for a convolutional kernel. The weights will be initialised,
@@ -116,6 +136,8 @@ def new_kernel_weights(
         The name of the tensor.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -123,6 +145,7 @@ def new_kernel_weights(
         A tensor with the weights.
 
     """
+    rng = np.random.RandomState(seed)
     weight_initialisation = np.zeros(shape)
     spatial_shape = shape[:-2]
     middle_index = [
@@ -135,15 +158,17 @@ def new_kernel_weights(
     weight_initialisation[middle_index] = 1.0 / np.sqrt(shape[-2])
 
     # add random noise to break symmetry
-    weight_initialisation += np.random.normal(
-        size=shape, loc=0.0, scale=stddev
-    )
+    weight_initialisation += rng.normal(size=shape, loc=0.0, scale=stddev)
 
     return tf.Variable(weight_initialisation, name=name, dtype=float_precision)
 
 
 def new_biases(
-    length, stddev=1.0, name="biases", float_precision=FLOAT_PRECISION
+    length,
+    stddev=1.0,
+    name="biases",
+    float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """Get new biases.
 
@@ -158,6 +183,8 @@ def new_biases(
         The name of the tensor.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -166,15 +193,14 @@ def new_biases(
     """
     return tf.Variable(
         tf.random.truncated_normal(
-            shape=[length], stddev=stddev, dtype=float_precision
+            shape=[length],
+            stddev=stddev,
+            dtype=float_precision,
+            seed=seed,
         ),
         name=name,
         dtype=float_precision,
     )
-    # return tf.Variable(tf.random_normal(shape=[length],
-    #                                     stddev=2.0/length,
-    #                                     dtype=float_precision),
-    #                    name=name, dtype=float_precision)
 
 
 def create_conv_nd_layers_weights(
@@ -183,6 +209,7 @@ def create_conv_nd_layers_weights(
     num_filters_list,
     name="conv_{}d",
     float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """Create weights and biases for conv 3d layers
 
@@ -209,12 +236,16 @@ def create_conv_nd_layers_weights(
         Name of weights and biases.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
     list of tf.Tensor, list of tf.Tensor
         Returns the list of weight and bias tensors for each layer
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
 
     num_dims = len(filter_size_list[0])
     name = name.format(num_dims)
@@ -233,10 +264,12 @@ def create_conv_nd_layers_weights(
         weight_name = "weights_{}_{:03d}".format(name, i)
         bias_name = "biases_{}_{:03d}".format(name, i)
 
-        # weights_list.append(new_kernel_weights(shape=shape, name=weight_name))
         weights_list.append(
             new_weights(
-                shape=shape, name=weight_name, float_precision=float_precision
+                shape=shape,
+                name=weight_name,
+                float_precision=float_precision,
+                seed=cnt(),
             )
         )
         biases_list.append(
@@ -244,6 +277,7 @@ def create_conv_nd_layers_weights(
                 length=num_filters,
                 name=bias_name,
                 float_precision=float_precision,
+                seed=cnt(),
             )
         )
 
@@ -259,6 +293,7 @@ def create_fc_layers_weights(
     max_out_size_list=None,
     name="fc",
     float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """
     Create weights and biases for
@@ -277,12 +312,17 @@ def create_fc_layers_weights(
         Name of weights and biases.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
     list of tf.Tensor, list of tf.Tensor
         Returns the list of weight and bias tensors for each layer
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
+
     # create max out array
     if max_out_size_list is None:
         max_out_size_list = [None for i in range(len(fc_sizes))]
@@ -301,6 +341,7 @@ def create_fc_layers_weights(
                 shape=[num_inputs, num_outputs],
                 name=weight_name,
                 float_precision=float_precision,
+                seed=cnt(),
             )
         )
         biases_list.append(
@@ -308,6 +349,7 @@ def create_fc_layers_weights(
                 length=num_outputs,
                 name=bias_name,
                 float_precision=float_precision,
+                seed=cnt(),
             )
         )
 

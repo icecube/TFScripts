@@ -7,6 +7,7 @@ from __future__ import division, print_function
 import tensorflow as tf
 
 # tfscripts specific imports
+from tfscripts.utils import SeedCounter
 from tfscripts.weights import new_weights
 
 # constants
@@ -238,7 +239,9 @@ def get_icecube_string_from_hex_coord(a, b):
     return hex_string_coord_dict[(a, b)]
 
 
-def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
+def get_icecube_kernel(
+    shape, get_ones=False, float_precision=FLOAT_PRECISION, seed=None
+):
     """
     Get a kernel of shape 'shape' for IceCube where coordinates of no real
     strings are set to constant zeros.
@@ -247,13 +250,14 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
     ----------
     shape : list of int
         The shape of the desired kernel.
-
     get_ones : bool, optional
         If True, returns constant ones for real DOMs, zeros for virtual DOMs.
         If False, return trainable parameter for real DOMs,
                 zeros for virtual DOMs
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -262,6 +266,9 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
     list of tf.Variable
         A list of tensorflow variables created in this function
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
+
     zeros = tf.zeros(shape, dtype=float_precision)
     ones = tf.ones(shape, dtype=float_precision)
 
@@ -278,7 +285,9 @@ def get_icecube_kernel(shape, get_ones=False, float_precision=FLOAT_PRECISION):
                     weights = ones
                 else:
                     weights = new_weights(
-                        shape, float_precision=float_precision
+                        shape,
+                        float_precision=float_precision,
+                        seed=cnt(),
                     )
                     var_list.append(weights)
             else:

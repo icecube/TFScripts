@@ -164,7 +164,10 @@ def plot_hex2D(hex_grid, file=None, hex_grid_spacing=1.0, norm="linear"):
 
 
 def visualize_rotated_hex_kernel(
-    filter_size, num_rotations, file="Rotation_{azimuth:2.2f}.png"
+    filter_size,
+    num_rotations,
+    file="Rotation_{azimuth:2.2f}.png",
+    seed=None,
 ):
     """Visualize hexagonal azimuth rotated filters
 
@@ -189,62 +192,57 @@ def visualize_rotated_hex_kernel(
     num_rotations : int.
       number of rotational kernels to create.
       Kernels will be rotated by 360 degrees / num_rotations
-
-
     file : str, optional
         A file pattern to which the plots of the rotated kernels will be saved
         to. The file pattern is formatted with a keyword 'azimuth' which holds
         the current azimuth rotation.
+    seed : int, optional
+        Seed for random number generator.
 
     Raises
     ------
     ValueError
         Description
     """
+    rng = np.random.RandomState(seed)
 
     azimuths = np.linspace(0, 360, num_rotations + 1)[:-1]
     Z = 0
-    center_weight = np.random.uniform(1, high=15, size=1)
+    center_weight = rng.uniform(1, high=15, size=1)
 
     # HARDCODE MAGIC... ToDo: Generalize
     if filter_size[0:2] == [2, 0]:
         # hexagonal 2,0 Filter
-        corner_weights1 = np.random.uniform(1, high=15, size=6)
+        corner_weights1 = rng.uniform(1, high=15, size=6)
     elif filter_size[0:2] == [2, 1]:
         # hexagonal 2,1 Filter
-        corner_weights1 = np.random.uniform(1, high=15, size=6)
+        corner_weights1 = rng.uniform(1, high=15, size=6)
         corner_weights2 = []
         for i in range(6):
-            corner_weights2.extend(
-                [Z, np.random.uniform(1, high=15, size=1)[0]]
-            )
+            corner_weights2.extend([Z, rng.uniform(1, high=15, size=1)[0]])
     elif filter_size[0:2] == [3, 0]:
         # hexagonal 3,0 Filter
-        corner_weights1 = np.random.uniform(1, high=15, size=6)
-        corner_weights2 = np.random.uniform(1, high=15, size=12)
+        corner_weights1 = rng.uniform(1, high=15, size=6)
+        corner_weights2 = rng.uniform(1, high=15, size=12)
     elif filter_size[0:2] == [3, 1]:
         # hexagonal 3,1 Filter
-        corner_weights1 = np.random.uniform(1, high=15, size=6)
-        corner_weights2 = np.random.uniform(1, high=15, size=12)
+        corner_weights1 = rng.uniform(1, high=15, size=6)
+        corner_weights2 = rng.uniform(1, high=15, size=12)
         corner_weights3 = []
         for i in range(6):
-            corner_weights3.extend(
-                [Z, np.random.uniform(1, high=15, size=1)[0], Z]
-            )
+            corner_weights3.extend([Z, rng.uniform(1, high=15, size=1)[0], Z])
     elif filter_size[0:2] == [3, 2]:
         # hexagonal 3,2 Filter
-        corner_weights1 = np.random.uniform(1, high=15, size=6)
-        corner_weights2 = np.random.uniform(1, high=15, size=12)
+        corner_weights1 = rng.uniform(1, high=15, size=6)
+        corner_weights2 = rng.uniform(1, high=15, size=12)
         corner_weights3 = []
         for i in range(6):
-            corner_weights3.extend(
-                [Z, Z, np.random.uniform(1, high=15, size=1)[0]]
-            )
+            corner_weights3.extend([Z, Z, rng.uniform(1, high=15, size=1)[0]])
     elif filter_size[0:2] == [4, 0]:
         # hexagonal 4,0 Filter
-        corner_weights1 = np.random.uniform(1, high=15, size=6)
-        corner_weights2 = np.random.uniform(1, high=15, size=12)
-        corner_weights3 = np.random.uniform(1, high=15, size=18)
+        corner_weights1 = rng.uniform(1, high=15, size=6)
+        corner_weights2 = rng.uniform(1, high=15, size=12)
+        corner_weights3 = rng.uniform(1, high=15, size=18)
     else:
         raise ValueError(
             "visualize_rotated_hex_kernel: Unsupported hexagonal "

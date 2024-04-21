@@ -239,6 +239,7 @@ def locally_connected_2d(
     strides=[1, 1],
     padding="SAME",
     dilation_rate=None,
+    seed=None,
 ):
     """
     Like conv2d, but doesn't share weights.
@@ -261,10 +262,11 @@ def locally_connected_2d(
               The stride of the sliding window for each dimension of input.
     padding : A string from: "SAME", "VALID".
         The type of padding algorithm to use.
-
     dilation_rate : None or list of int of length 2
         [dilattion in x, dilation in y]
         defines dilattion rate to be used
+    seed : None or int
+        Seed for the random number generator.
 
     Returns
     -------
@@ -316,7 +318,9 @@ def locally_connected_2d(
     # fast shortcut
     if list(filter_size) == [1, 1]:
         if kernel is None:
-            kernel = new_weights(shape=input_shape[1:] + [num_outputs])
+            kernel = new_weights(
+                shape=input_shape[1:] + [num_outputs], seed=seed
+            )
         output = tf.reduce_sum(
             input_tensor=tf.expand_dims(input, axis=4) * kernel, axis=3
         )
@@ -412,7 +416,7 @@ def locally_connected_2d(
     # get kernel
     # ------------------
     if kernel is None:
-        kernel = new_weights(shape=kernel_shape)
+        kernel = new_weights(shape=kernel_shape, seed=seed)
 
     # ------------------
     # perform convolution
@@ -431,6 +435,7 @@ def locally_connected_3d(
     strides=[1, 1, 1],
     padding="SAME",
     dilation_rate=None,
+    seed=None,
 ):
     """
     Like conv3d, but doesn't share weights.
@@ -456,6 +461,8 @@ def locally_connected_3d(
     dilation_rate : None or list of int of length 3
         [dilattion in x, dilation in y, dilation in z]
         defines dilattion rate to be used
+    seed : None or int
+        Seed for the random number generator.
 
     Returns
     -------
@@ -507,7 +514,9 @@ def locally_connected_3d(
     # fast shortcut
     if list(filter_size) == [1, 1, 1]:
         if kernel is None:
-            kernel = new_weights(shape=input_shape[1:] + [num_outputs])
+            kernel = new_weights(
+                shape=input_shape[1:] + [num_outputs], seed=seed
+            )
         output = tf.reduce_sum(
             input_tensor=tf.expand_dims(input, axis=5) * kernel, axis=4
         )
@@ -628,7 +637,7 @@ def locally_connected_3d(
     # get kernel
     # ------------------
     if kernel is None:
-        kernel = new_weights(shape=kernel_shape)
+        kernel = new_weights(shape=kernel_shape, seed=seed)
 
     # ------------------
     # perform convolution
@@ -663,18 +672,14 @@ def local_translational3d_trafo(
         float32, float64, int64, int32, uint8, uint16, int16, int8, complex64,
         complex128, qint8, quint8, qint32, half.
         Shape [batch, in_depth, in_height, in_width, in_channels].
-
     num_outputs : int
         Number of output channels
-
     filter_size : list of int of size 3
             [filter x size, filter y size, filter z size]
-
     fcn : callable: fcn(input_patch)
             Defines the transformation:
               input_patch -> output
               with output.shape = [-1, num_outputs]
-
     weights : None, optional
         Description
     strides : A list of ints that has length >= 5. 1-D tensor of length 5.
@@ -682,11 +687,9 @@ def local_translational3d_trafo(
             Must have strides[0] = strides[4] = 1.
     padding : A string from: "SAME", "VALID".
         The type of padding algorithm to use.
-
     dilation_rate :None or list of int of length 3
         [dilattion in x, dilation in y, dilation in z]
         defines dilattion rate to be used
-
     is_training : bool, optional
         Indicates whether currently in training or inference mode.
         True: in training mode

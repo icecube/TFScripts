@@ -31,6 +31,7 @@ class AddResidual(tf.Module):
         use_scale_factor=True,
         scale_factor=0.001,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -49,6 +50,8 @@ class AddResidual(tf.Module):
             use_scale_factor is True.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
         """
@@ -66,6 +69,7 @@ class AddResidual(tf.Module):
                 [self.num_outputs],
                 stddev=self.scale_factor,
                 float_precision=float_precision,
+                seed=seed,
             )
 
     def __call__(self, input, residual):
@@ -160,6 +164,7 @@ class Activation(tf.Module):
         input_shape=None,
         use_batch_normalisation=False,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -174,6 +179,8 @@ class Activation(tf.Module):
         True: use batch normalisation
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
         """
@@ -192,23 +199,33 @@ class Activation(tf.Module):
 
         if activation_type == "prelu":
             self.slope_weight = new_weights(
-                input_shape[1:], float_precision=float_precision
+                input_shape[1:],
+                float_precision=float_precision,
+                seed=seed,
             )
 
         elif activation_type == "pelu":
             self.a_weight = new_weights(
-                input_shape[1:], float_precision=float_precision
+                input_shape[1:],
+                float_precision=float_precision,
+                seed=seed,
             )
             self.b_weight = new_weights(
-                input_shape[1:], float_precision=float_precision
+                input_shape[1:],
+                float_precision=float_precision,
+                seed=seed + 1,
             )
 
         elif activation_type == "pgaussian":
             self.sigma_weight = new_weights(
-                input_shape[1:], float_precision=float_precision
+                input_shape[1:],
+                float_precision=float_precision,
+                seed=seed,
             )
             self.mu = new_weights(
-                input_shape[1:], float_precision=float_precision
+                input_shape[1:],
+                float_precision=float_precision,
+                seed=seed + 1,
             )
 
     def __call__(self, layer, is_training=None):

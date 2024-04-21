@@ -13,6 +13,7 @@ import logging
 import tensorflow as tf
 
 # tfscripts specific imports
+from tfscripts.utils import SeedCounter
 from tfscripts.weights import new_weights, new_biases
 from tfscripts.hex.visual import print_hex_data
 from tfscripts.hex import rotation
@@ -77,6 +78,7 @@ def get_hex_kernel(
     print_kernel=False,
     get_ones=False,
     float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """Get hexagonal convolution kernel
 
@@ -137,6 +139,8 @@ def get_hex_kernel(
         hexagon.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -154,6 +158,9 @@ def get_hex_kernel(
     ValueError
         Description
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
+
     k = filter_size[0]
     x = filter_size[1]
 
@@ -189,7 +196,9 @@ def get_hex_kernel(
                         weights = ones
                     else:
                         weights = new_weights(
-                            filter_size[2:], float_precision=float_precision
+                            filter_size[2:],
+                            float_precision=float_precision,
+                            seed=cnt(),
                         )
                         var_list.append(weights)
                     test_hex_dict[(a, b)] = 1
@@ -231,7 +240,9 @@ def get_hex_kernel(
                         weights = ones
                     else:
                         weights = new_weights(
-                            filter_size[2:], float_precision=float_precision
+                            filter_size[2:],
+                            float_precision=float_precision,
+                            seed=cnt(),
                         )
                         var_list.append(weights)
                     test_hex_dict[(a, b)] = 1
@@ -264,6 +275,7 @@ class ConvHex(tf.Module):
         var_list=None,
         azimuth=None,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -340,6 +352,8 @@ class ConvHex(tf.Module):
             [given in degrees] in counterclockwise direction
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
 
@@ -362,6 +376,7 @@ class ConvHex(tf.Module):
                     filter_size + [num_channels, num_filters],
                     azimuth,
                     float_precision=float_precision,
+                    seed=seed,
                 )
             else:
                 if num_rotations > 1:
@@ -369,11 +384,13 @@ class ConvHex(tf.Module):
                         filter_size + [num_channels, num_filters],
                         num_rotations,
                         float_precision=float_precision,
+                        seed=seed,
                     )
                 else:
                     kernel, var_list = get_hex_kernel(
                         filter_size + [num_channels, num_filters],
                         float_precision=float_precision,
+                        seed=seed,
                     )
 
         self.num_filters = num_filters
@@ -385,11 +402,12 @@ class ConvHex(tf.Module):
         self.zero_out = zero_out
         self.azimuth = azimuth
         self.float_precision = float_precision
+        self.seed = seed
         self.kernel = kernel
         self.kernel_var_list = var_list
 
     def __call__(self, inputs):
-        """Apply Activation Module.
+        """Apply ConvHex Module.
 
         Parameters
         ----------
@@ -435,6 +453,7 @@ class ConvHex(tf.Module):
                     result.get_shape().as_list()[3:],
                     get_ones=True,
                     float_precision=self.float_precision,
+                    seed=self.seed,
                 )
                 result = result * zero_out_matrix
 
@@ -453,6 +472,7 @@ class ConvHex(tf.Module):
                     ],
                     get_ones=True,
                     float_precision=self.float_precision,
+                    seed=self.seed,
                 )
 
                 # Make sure there were no extra variables created.
@@ -491,6 +511,7 @@ class ConvHex4d(tf.Module):
         stack_axis=None,
         zero_out=False,
         float_precision=FLOAT_PRECISION,
+        seed=None,
         name=None,
     ):
         """Initialize object
@@ -573,6 +594,8 @@ class ConvHex4d(tf.Module):
             set to zero.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
         name : None, optional
             The name of the tensorflow module.
 
@@ -595,6 +618,7 @@ class ConvHex4d(tf.Module):
                     filter_size + [num_channels, num_filters],
                     azimuth,
                     float_precision=float_precision,
+                    seed=seed,
                 )
             else:
                 if num_rotations > 1:
@@ -602,11 +626,13 @@ class ConvHex4d(tf.Module):
                         filter_size + [num_channels, num_filters],
                         num_rotations,
                         float_precision=float_precision,
+                        seed=seed,
                     )
                 else:
                     kernel, var_list = get_hex_kernel(
                         filter_size + [num_channels, num_filters],
                         float_precision=float_precision,
+                        seed=seed,
                     )
 
         self.num_filters = num_filters
@@ -619,11 +645,12 @@ class ConvHex4d(tf.Module):
         self.stack_axis = stack_axis
         self.zero_out = zero_out
         self.float_precision = float_precision
+        self.seed = seed
         self.kernel = kernel
         self.kernel_var_list = var_list
 
     def __call__(self, inputs):
-        """Apply Activation Module.
+        """Apply ConvHex4d Module.
 
         Parameters
         ----------
@@ -662,6 +689,7 @@ class ConvHex4d(tf.Module):
                 ],
                 get_ones=True,
                 float_precision=self.float_precision,
+                seed=self.seed,
             )
 
             # Make sure there were no extra variables created.
@@ -689,6 +717,7 @@ def create_conv_hex_layers_weights(
     num_rotations_list=1,
     azimuth_list=None,
     float_precision=FLOAT_PRECISION,
+    seed=None,
 ):
     """Create weights and biases for conv hex n-dimensional layers with n >= 2
 
@@ -746,6 +775,8 @@ def create_conv_hex_layers_weights(
         If azimuth is None, the hexagonal kernel is not rotated.
     float_precision : tf.dtype, optional
         The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -756,6 +787,8 @@ def create_conv_hex_layers_weights(
     list of tf.Variable
         A list of tensorflow variables created in this function
     """
+    # create seed counter
+    cnt = SeedCounter(seed)
 
     # create num_rotations_list
     if isinstance(num_rotations_list, int):
@@ -777,7 +810,10 @@ def create_conv_hex_layers_weights(
     ):
         if azimuth is not None:
             kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
-                filter_size, azimuth, float_precision=float_precision
+                filter_size,
+                azimuth,
+                float_precision=float_precision,
+                seed=cnt(),
             )
         else:
             if num_rotations > 1:
@@ -785,11 +821,13 @@ def create_conv_hex_layers_weights(
                     filter_size + [num_input_channels, num_filters],
                     num_rotations,
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
             else:
                 kernel, var_list = get_hex_kernel(
                     filter_size + [num_input_channels, num_filters],
                     float_precision=float_precision,
+                    seed=cnt(),
                 )
 
         variable_list.extend(var_list)
@@ -798,6 +836,7 @@ def create_conv_hex_layers_weights(
             new_biases(
                 length=num_filters * num_rotations,
                 float_precision=float_precision,
+                seed=cnt(),
             )
         )
         num_input_channels = num_filters

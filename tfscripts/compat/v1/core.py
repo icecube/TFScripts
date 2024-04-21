@@ -17,7 +17,12 @@ from tfscripts.compat.v1 import FLOAT_PRECISION
 
 
 def add_residual(
-    input, residual, strides=None, use_scale_factor=True, scale_factor=0.001
+    input,
+    residual,
+    strides=None,
+    use_scale_factor=True,
+    scale_factor=0.001,
+    seed=None,
 ):
     """Convenience function to add a residual
 
@@ -39,6 +44,8 @@ def add_residual(
     scale_factor : float, optional
         Defines how much the residuals will be scaled prior to addition if
         use_scale_factor is True.
+    seed : int, optional
+        Seed for the random number generator.
 
     Returns
     -------
@@ -78,7 +85,7 @@ def add_residual(
     # Residuals added over multiple layers accumulate.
     # A scale factor < 1 reduces instabilities in beginning
     if use_scale_factor:
-        scale = new_weights([num_outputs], stddev=scale_factor)
+        scale = new_weights([num_outputs], stddev=scale_factor, seed=seed)
         residual = residual * scale
         if num_inputs == num_outputs:
             output = residual + input
@@ -115,6 +122,7 @@ def activation(
     use_batch_normalisation=False,
     is_training=None,
     verbose=True,
+    seed=None,
 ):
     """
     Helper-functions to perform activation on a layer
@@ -218,7 +226,7 @@ def activation(
         )
 
     elif activation_type == "prelu":
-        slope = new_weights(layer.get_shape().as_list()[1:]) + 1.0
+        slope = new_weights(layer.get_shape().as_list()[1:], seed=seed) + 1.0
         layer = tf.where(
             tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
             layer * slope,
@@ -226,8 +234,8 @@ def activation(
         )
 
     elif activation_type == "pelu":
-        a = new_weights(layer.get_shape().as_list()[1:]) + 1.0
-        b = new_weights(layer.get_shape().as_list()[1:]) + 1.0
+        a = new_weights(layer.get_shape().as_list()[1:], seed=seed) + 1.0
+        b = new_weights(layer.get_shape().as_list()[1:], seed=seed + 1) + 1.0
         layer = tf.where(
             tf.less(layer, tf.constant(0, dtype=FLOAT_PRECISION)),
             (tf.exp(layer / b) - 1) * a,
@@ -238,10 +246,10 @@ def activation(
         layer = tf.exp(-tf.square(layer))
 
     elif activation_type == "pgaussian":
-        sigma = new_weights(layer.get_shape().as_list()[1:]) + tf.constant(
-            1.0, dtype=FLOAT_PRECISION
-        )
-        mu = new_weights(layer.get_shape().as_list()[1:])
+        sigma = new_weights(
+            layer.get_shape().as_list()[1:], seed=seed
+        ) + tf.constant(1.0, dtype=FLOAT_PRECISION)
+        mu = new_weights(layer.get_shape().as_list()[1:], seed=seed + 1)
         layer = tf.exp(
             tf.square((layer - mu) / sigma)
             * tf.constant(-0.5, dtype=FLOAT_PRECISION)
