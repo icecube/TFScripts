@@ -1,7 +1,7 @@
 """
 Conv functions for tfscripts:
     convolution helper functions,
-    locally connected 1d, 2d, and 3d convolutions [tf.Modules],
+    locally connected 1d, 2d, and 3d convolutions [keras layers],
     dynamic 2d and 3d convolution,
     local trafo 2d and 3d,
     wrapper: trafo on patch 2d and 3d
@@ -16,7 +16,7 @@ import numpy as np
 import tensorflow as tf
 
 # tfscripts specific imports
-from tfscripts.weights import new_locally_connected_weights
+from tfscripts.weights import add_locally_connected_weights
 
 # constants
 from tfscripts import FLOAT_PRECISION
@@ -234,7 +234,7 @@ def get_conv_slice(position, input_length, filter_size, stride, dilation=1):
     return conv_slice, (padding_left, padding_right)
 
 
-class LocallyConnected1d(tf.Module):
+class LocallyConnected1d(tf.keras.layers.Layer):
     """Like conv1d, but doesn't share weights."""
 
     def __init__(
@@ -334,7 +334,8 @@ class LocallyConnected1d(tf.Module):
         # fast shortcut
         if kernel is None:
             if list(filter_size) == [1]:
-                kernel = new_locally_connected_weights(
+                kernel = add_locally_connected_weights(
+                    self=self,
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0],
                     float_precision=float_precision,
@@ -342,7 +343,8 @@ class LocallyConnected1d(tf.Module):
                 )
 
             else:
-                kernel = new_locally_connected_weights(
+                kernel = add_locally_connected_weights(
+                    self=self,
                     shape=kernel_shape,
                     shared_axes=[0],
                     float_precision=float_precision,
@@ -359,7 +361,7 @@ class LocallyConnected1d(tf.Module):
         self.float_precision = float_precision
         self.kernel = kernel
 
-    def __call__(self, inputs):
+    def call(self, inputs):
         """Apply 1d Locally Connected Module.
 
         Parameters
@@ -457,7 +459,7 @@ class LocallyConnected1d(tf.Module):
         return output
 
 
-class LocallyConnected2d(tf.Module):
+class LocallyConnected2d(tf.keras.layers.Layer):
     """Like conv2d, but doesn't share weights."""
 
     def __init__(
@@ -557,7 +559,8 @@ class LocallyConnected2d(tf.Module):
         # fast shortcut
         if kernel is None:
             if list(filter_size) == [1, 1]:
-                kernel = new_locally_connected_weights(
+                kernel = add_locally_connected_weights(
+                    self=self,
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0, 1],
                     float_precision=float_precision,
@@ -565,7 +568,8 @@ class LocallyConnected2d(tf.Module):
                 )
 
             else:
-                kernel = new_locally_connected_weights(
+                kernel = add_locally_connected_weights(
+                    self=self,
                     shape=kernel_shape,
                     shared_axes=[0],
                     float_precision=float_precision,
@@ -582,7 +586,7 @@ class LocallyConnected2d(tf.Module):
         self.float_precision = float_precision
         self.kernel = kernel
 
-    def __call__(self, inputs):
+    def call(self, inputs):
         """Apply 2d Locally Connected Module.
 
         Parameters
@@ -705,7 +709,7 @@ class LocallyConnected2d(tf.Module):
         return output
 
 
-class LocallyConnected3d(tf.Module):
+class LocallyConnected3d(tf.keras.layers.Layer):
     """Like conv3d, but doesn't share weights."""
 
     def __init__(
@@ -797,7 +801,8 @@ class LocallyConnected3d(tf.Module):
         # fast shortcut
         if kernel is None:
             if list(filter_size) == [1, 1, 1]:
-                kernel = new_locally_connected_weights(
+                kernel = add_locally_connected_weights(
+                    self=self,
                     shape=input_shape[1:] + [num_outputs],
                     shared_axes=[0, 1, 2],
                     float_precision=float_precision,
@@ -805,7 +810,8 @@ class LocallyConnected3d(tf.Module):
                 )
 
             else:
-                kernel = new_locally_connected_weights(
+                kernel = add_locally_connected_weights(
+                    self=self,
                     shape=kernel_shape,
                     shared_axes=[0],
                     float_precision=float_precision,
@@ -822,7 +828,7 @@ class LocallyConnected3d(tf.Module):
         self.float_precision = float_precision
         self.kernel = kernel
 
-    def __call__(self, inputs):
+    def call(self, inputs):
         """Apply 3d Locally Connected Module.
 
         Parameters

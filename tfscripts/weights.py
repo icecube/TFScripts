@@ -14,6 +14,230 @@ from tfscripts.utils import SeedCounter
 from tfscripts import FLOAT_PRECISION
 
 
+class LocallyConnectedWeightInitializer(tf.keras.Initializer):
+    def __init__(self, mean=0.0, stddev=1.0, shared_axes=None, seed=None):
+        """Initializer for Locally Connected Weights
+
+        Parameters
+        ----------
+        mean : float, optional
+            The initial values are sampled from a truncated gaussian with this
+            Gaussian mean.
+        stddev : float, optional
+            The initial values are sampled from a truncated gaussian with this
+            std. deviation.
+        shared_axes : list of int, optional
+            A list of axes over which the same initial values will be chosen.
+        seed : int, optional
+            Seed for the random number generator.
+        """
+        self.mean = mean
+        self.stddev = stddev
+        self.shared_axes = shared_axes
+        self.seed = seed
+
+    def __call__(self, shape, dtype=None, **kwargs):
+        if self.shared_axes is None:
+            self.shared_axes = []
+
+        shape_init = []
+        multiples = []
+        for index, dim in enumerate(shape):
+            if index in self.shared_axes:
+                shape_init.append(1)
+                multiples.append(dim)
+            else:
+                shape_init.append(dim)
+                multiples.append(1)
+
+        # sample initial values
+        initial_value = tf.random.truncated_normal(
+            shape_init,
+            mean=self.mean,
+            stddev=self.stddev,
+            dtype=dtype,
+            seed=self.seed,
+        )
+
+        # tile over shared axes
+        initial_value = tf.tile(initial_value, multiples=multiples)
+
+        return initial_value
+
+    def get_config(self):  # To support serialization
+        return {
+            "mean": self.mean,
+            "stddev": self.stddev,
+            "shared_axes": self.shared_axes,
+            "seed": self.seed,
+        }
+
+
+def add_locally_connected_weights(
+    self,
+    shape,
+    mean=0.0,
+    stddev=1.0,
+    name="weights",
+    shared_axes=None,
+    float_precision=FLOAT_PRECISION,
+    seed=None,
+):
+    """Helper-function to create new weights
+
+    Same as new_locally_connected_weights,
+    but adds the weights to the model
+    via keras add_weight method.
+    Note: this method was added later with the transition
+    from tf.Module to tf.keras.Layer.
+    The keras layers have issues in finding weights
+    added manually via tf.Variable.
+
+    Parameters
+    ----------
+    self : tf.keras.Model
+        The model to add the weights to.
+    shape : list of int
+        The desired shape.
+    mean : float, optional
+        The initial values are sampled from a truncated gaussian with this
+        mean.
+    stddev : float, optional
+        The initial values are sampled from a truncated gaussian with this
+        std. deviation.
+    name : str, optional
+        The name of the tensor.
+    shared_axes : list of int, optional
+        A list of axes over which the same initial values will be chosen.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
+
+    Returns
+    -------
+    tf.Tensor
+        A tensor with the weights.
+    """
+    return self.add_weight(
+        shape=shape,
+        initializer=LocallyConnectedWeightInitializer(
+            mean=mean,
+            stddev=stddev,
+            shared_axes=shared_axes,
+            seed=seed,
+        ),
+        dtype=float_precision,
+        name=name,
+    )
+
+
+def add_weights(
+    self,
+    shape,
+    mean=0.0,
+    stddev=1.0,
+    name="weights",
+    float_precision=FLOAT_PRECISION,
+    seed=None,
+):
+    """Helper-function to create new weights
+
+    Same as new_weights, but adds the weights to the model
+    via keras add_weight method.
+    Note: this method was added later with the transition
+    from tf.Module to tf.keras.Layer.
+    The keras layers have issues in finding weights
+    added manually via tf.Variable.
+
+    Parameters
+    ----------
+    self : tf.keras.Model
+        The model to add the weights to.
+    shape : list of int
+        The desired shape.
+    stddev : float, optional
+        The initial values are sampled from a truncated gaussian with this
+        std. deviation.
+    name : str, optional
+        The name of the tensor.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
+
+    Returns
+    -------
+    tf.Tensor
+        A tensor with the weights.
+
+    """
+    return self.add_weight(
+        shape=shape,
+        initializer=tf.keras.initializers.TruncatedNormal(
+            mean=mean,
+            stddev=stddev,
+            seed=seed,
+        ),
+        dtype=float_precision,
+        name=name,
+    )
+
+
+def add_biases(
+    self,
+    length,
+    mean=0.0,
+    stddev=1.0,
+    name="biases",
+    float_precision=FLOAT_PRECISION,
+    seed=None,
+):
+    """Get new biases.
+
+    Same as new_biases, but adds the weights to the model
+    via keras add_weight method.
+    Note: this method was added later with the transition
+    from tf.Module to tf.keras.Layer.
+    The keras layers have issues in finding weights
+    added manually via tf.Variable.
+
+    Parameters
+    ----------
+    self : tf.keras.Model
+        The model to add the weights to.
+    length : int
+        Number of biases to get.
+    mean : float, optional
+        The initial values are sampled from a truncated gaussian with this
+        mean.
+    stddev : float, optional
+        The initial values are sampled from a truncated gaussian with this
+        std. deviation.
+    name : str, optional
+        The name of the tensor.
+    float_precision : tf.dtype, optional
+        The tensorflow dtype describing the float precision to use.
+    seed : int, optional
+        Seed for the random number generator.
+
+    Returns
+    -------
+    tf.Tensor
+        A tensor with the biases.
+    """
+    return self.add_weight(
+        shape=[length],
+        initializer=tf.keras.initializers.TruncatedNormal(
+            mean=mean,
+            stddev=stddev,
+            seed=seed,
+        ),
+        dtype=float_precision,
+        name=name,
+    )
+
+
 def new_weights(
     shape,
     stddev=1.0,

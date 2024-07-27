@@ -9,8 +9,8 @@ import tensorflow as tf
 
 # tfscripts specific imports
 from tfscripts.utils import SeedCounter
-from tfscripts.weights import new_weights, new_biases
-from tfscripts.weights import new_locally_connected_weights
+from tfscripts.weights import add_weights, add_biases
+from tfscripts.weights import add_locally_connected_weights
 from tfscripts import conv
 from tfscripts import core
 from tfscripts import pooling
@@ -124,8 +124,8 @@ def flatten_hex_layer(hex_layer):
     return hex_layer_flat, total_num_features
 
 
-class ConvNdLayer(tf.Module):
-    """TF Module for creating a new n-dim Convolutional Layer
+class ConvNdLayer(tf.keras.layers.Layer):
+    """TF Keras layer for creating a new n-dim Convolutional Layer
 
     1 <= n <=4 are supported.
     For n == 3 (3 spatial dimensions x, y, and z):
@@ -368,7 +368,8 @@ class ConvNdLayer(tf.Module):
         # Create new weights aka. filters with the given shape.
         if method.lower() == "convolution":
             if weights is None:
-                weights = new_weights(
+                weights = add_weights(
+                    self=self,
                     shape=shape,
                     float_precision=float_precision,
                     seed=cnt(),
@@ -376,7 +377,8 @@ class ConvNdLayer(tf.Module):
 
             # Create new biases, one for each filter.
             if biases is None:
-                biases = new_biases(
+                biases = add_biases(
+                    self=self,
                     length=num_filters,
                     float_precision=float_precision,
                     seed=cnt(),
@@ -450,7 +452,8 @@ class ConvNdLayer(tf.Module):
 
             # Create new biases, one for each filter.
             if biases is None:
-                biases = new_biases(
+                biases = add_biases(
+                    self=self,
                     length=num_filters * hex_num_rotations,
                     float_precision=float_precision,
                     seed=cnt(),
@@ -504,7 +507,8 @@ class ConvNdLayer(tf.Module):
 
             # Create new biases, one for each filter and position
             if biases is None:
-                biases = new_locally_connected_weights(
+                biases = add_locally_connected_weights(
+                    self=self,
                     shape=self.conv_layer.output_shape[1:],
                     shared_axes=[i for i in range(num_dims)],
                     float_precision=float_precision,
@@ -565,7 +569,8 @@ class ConvNdLayer(tf.Module):
                 )
 
             if biases is None:
-                biases = new_biases(
+                biases = add_biases(
+                    self=self,
                     length=num_filters,
                     float_precision=float_precision,
                     seed=cnt(),
@@ -575,7 +580,7 @@ class ConvNdLayer(tf.Module):
             raise ValueError("Unknown method: {!r}".format(method))
 
         self.biases = biases
-        self.weights = weights
+        self._weights = weights
 
         # get shape of activation input
         # todo: figure out better way to obtain this
@@ -620,7 +625,7 @@ class ConvNdLayer(tf.Module):
                 seed=cnt(),
             )
 
-    def __call__(self, inputs, is_training, keep_prob=None):
+    def call(self, inputs, is_training, keep_prob=None):
         """Apply Module.
 
         Parameters
@@ -780,8 +785,8 @@ class ConvNdLayer(tf.Module):
         return layer
 
 
-class FCLayer(tf.Module):
-    """TF Module for creating a new Fully-Connected Layer
+class FCLayer(tf.keras.layers.Layer):
+    """TF Keras Layer for creating a new Fully-Connected Layer
 
     input: 2-dim tensor of shape [batch_size, num_inputs]
     output: 2-dim tensor of shape [batch_size, num_outputs]
@@ -853,20 +858,22 @@ class FCLayer(tf.Module):
 
         # Create new weights and biases.
         if weights is None:
-            weights = new_weights(
+            weights = add_weights(
+                self=self,
                 shape=[num_inputs, num_outputs],
                 float_precision=float_precision,
                 seed=seed,
             )
         if biases is None:
-            biases = new_biases(
+            biases = add_biases(
+                self=self,
                 length=num_outputs,
                 float_precision=float_precision,
                 seed=seed,
             )
 
         self.biases = biases
-        self.weights = weights
+        self._weights = weights
 
         self.activation = core.Activation(
             activation_type=activation,
@@ -914,7 +921,7 @@ class FCLayer(tf.Module):
         self.float_precision = float_precision
         self.seed = seed
 
-    def __call__(self, inputs, is_training, keep_prob):
+    def call(self, inputs, is_training, keep_prob):
         """Apply Module.
 
         Parameters
@@ -957,7 +964,7 @@ class FCLayer(tf.Module):
 
         # Calculate the layer as the matrix multiplication of
         # the input and weights, and then add the bias-values.
-        layer = tf.matmul(inputs, self.weights)
+        layer = tf.matmul(inputs, self._weights)
 
         # repair to get std dev of 1
         if self.repair_std_deviation:
@@ -986,8 +993,8 @@ class FCLayer(tf.Module):
         return layer
 
 
-class ChannelWiseFCLayer(tf.Module):
-    """TF Module for creating a new channel wise Fully-Connected Layer
+class ChannelWiseFCLayer(tf.keras.layers.Layer):
+    """TF Keras Layer for a new channel wise Fully-Connected Layer
 
     input: 3-dim tensor of shape [batch_size, num_inputs, num_channel]
     output: 3-dim tensor of shape [batch_size, num_outputs, num_channel]
@@ -1065,20 +1072,22 @@ class ChannelWiseFCLayer(tf.Module):
 
         # Create new weights and biases.
         if weights is None:
-            weights = new_weights(
+            weights = add_weights(
+                self=self,
                 shape=[num_channels, num_inputs, num_outputs],
                 float_precision=float_precision,
                 seed=seed,
             )
         if biases is None:
-            biases = new_weights(
+            biases = add_weights(
+                self=self,
                 shape=[num_outputs, num_channels],
                 float_precision=float_precision,
                 seed=seed,
             )
 
         self.biases = biases
-        self.weights = weights
+        self._weights = weights
 
         self.activation = core.Activation(
             activation_type=activation,
@@ -1127,7 +1136,7 @@ class ChannelWiseFCLayer(tf.Module):
         self.float_precision = float_precision
         self.seed = seed
 
-    def __call__(self, inputs, is_training, keep_prob):
+    def call(self, inputs, is_training, keep_prob):
         """Apply Module.
 
         Parameters
@@ -1176,7 +1185,7 @@ class ChannelWiseFCLayer(tf.Module):
         # Calculate the layer as the matrix multiplication of
         # the input and weights, and then add the bias-values.
         # output: [num_channel, batch, num_outputs]
-        output = tf.matmul(input_transpose, self.weights)
+        output = tf.matmul(input_transpose, self._weights)
         layer = tf.transpose(a=output, perm=[1, 2, 0])
         # layer: [batch, num_outputs, num_channel]
 
@@ -1213,8 +1222,8 @@ class ChannelWiseFCLayer(tf.Module):
         return layer
 
 
-class FCLayers(tf.Module):
-    """TF Module for creating new fully connected layers."""
+class FCLayers(tf.keras.layers.Layer):
+    """TF Keras Layer for creating new fully connected layers."""
 
     def __init__(
         self,
@@ -1368,7 +1377,7 @@ class FCLayers(tf.Module):
                 print("{}_{:03d}".format(name, i), layer_i.output_shape)
             self.layers.append(layer_i)
 
-    def __call__(self, inputs, is_training, keep_prob=None):
+    def call(self, inputs, is_training, keep_prob=None):
         """Apply layers
 
         Parameters
@@ -1397,8 +1406,8 @@ class FCLayers(tf.Module):
         return layer_outputs
 
 
-class ConvNdLayers(tf.Module):
-    """TF Module for creating new conv1d, conv2d, conv3d, and conv4d layers."""
+class ConvNdLayers(tf.keras.layers.Layer):
+    """TF Keras Layer for conv1d, conv2d, conv3d, and conv4d layers."""
 
     def __init__(
         self,
@@ -1778,7 +1787,7 @@ class ConvNdLayers(tf.Module):
                 print("{}_{:03d}".format(name, i), layer_i.output_shape)
             self.layers.append(layer_i)
 
-    def __call__(self, inputs, is_training, keep_prob=None):
+    def call(self, inputs, is_training, keep_prob=None):
         """Apply layers
 
         Parameters

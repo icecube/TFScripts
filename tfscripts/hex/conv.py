@@ -1,7 +1,7 @@
 """
 tfscripts hexagonal convolution utility functions
     Hex utility functions
-    hex conv 3d and 4d [tf.Modules]
+    hex conv 3d and 4d [Keras Layers]
 
 ToDo:
     - Remove duplicate code
@@ -258,7 +258,7 @@ def get_hex_kernel(
     return hexKernel, var_list
 
 
-class ConvHex(tf.Module):
+class ConvHex(tf.keras.layers.Layer):
     """Convolve a hex2d or hex3d layer (2d hex + 1d cartesian)"""
 
     def __init__(
@@ -406,7 +406,7 @@ class ConvHex(tf.Module):
         self.kernel = kernel
         self.kernel_var_list = var_list
 
-    def __call__(self, inputs):
+    def call(self, inputs):
         """Apply ConvHex Module.
 
         Parameters
@@ -419,6 +419,14 @@ class ConvHex(tf.Module):
         tf.Tensor
             The output tensor.
         """
+        # sanity check to make sure that keras collected tf.Variable
+        if len(self.variables) < len(self.kernel_var_list):
+            raise ValueError(
+                "ConvHex4d: Variables not collected by keras. "
+                "This is an issue that underlying trainable variables "
+                "created via tf.Variable are not collected by keras. "
+            )
+
         inputs = tf.convert_to_tensor(inputs)
 
         # make sure it is a 2d or 3d convolution
@@ -493,7 +501,7 @@ class ConvHex(tf.Module):
         return result
 
 
-class ConvHex4d(tf.Module):
+class ConvHex4d(tf.keras.layers.Layer):
     """Convolve a hex4hex3d layer (2d hex + 1d cartesian)"""
 
     def __init__(
@@ -649,7 +657,7 @@ class ConvHex4d(tf.Module):
         self.kernel = kernel
         self.kernel_var_list = var_list
 
-    def __call__(self, inputs):
+    def call(self, inputs):
         """Apply ConvHex4d Module.
 
         Parameters
@@ -662,6 +670,14 @@ class ConvHex4d(tf.Module):
         tf.Tensor
             The output tensor.
         """
+        # sanity check to make sure that keras collected tf.Variable
+        if len(self.variables) < len(self.kernel_var_list):
+            raise ValueError(
+                "ConvHex4d: Variables not collected by keras. "
+                "This is an issue that underlying trainable variables "
+                "created via tf.Variable are not collected by keras. "
+            )
+
         inputs = tf.convert_to_tensor(inputs)
 
         # make sure it is a 4d convolution

@@ -10,13 +10,13 @@ import numpy as np
 import tensorflow as tf
 
 # tfscripts specific imports
-from tfscripts.weights import new_weights
+from tfscripts.weights import add_weights
 
 # constants
 from tfscripts import FLOAT_PRECISION
 
 
-class AddResidual(tf.Module):
+class AddResidual(tf.keras.layers.Layer):
     """Convenience Module to add a residual
 
     Will add input + scale*residual where these overlap in the last dimension
@@ -65,14 +65,15 @@ class AddResidual(tf.Module):
         # Residuals added over multiple layers accumulate.
         # A scale factor < 1 reduces instabilities in beginning
         if self.use_scale_factor:
-            self.scale = new_weights(
-                [self.num_outputs],
+            self.scale = add_weights(
+                self=self,
+                shape=[self.num_outputs],
                 stddev=self.scale_factor,
                 float_precision=float_precision,
                 seed=seed,
             )
 
-    def __call__(self, input, residual):
+    def call(self, input, residual):
         """Apply residual additions
 
         Parameters
@@ -149,7 +150,7 @@ class AddResidual(tf.Module):
         return output
 
 
-class Activation(tf.Module):
+class Activation(tf.keras.layers.Layer):
     """Helper-Module to perform activation on a layer
 
     For parametric activation functions this assumes that the first
@@ -198,37 +199,42 @@ class Activation(tf.Module):
             )
 
         if activation_type == "prelu":
-            self.slope_weight = new_weights(
-                input_shape[1:],
+            self.slope_weight = add_weights(
+                self=self,
+                shape=input_shape[1:],
                 float_precision=float_precision,
                 seed=seed,
             )
 
         elif activation_type == "pelu":
-            self.a_weight = new_weights(
-                input_shape[1:],
+            self.a_weight = add_weights(
+                self=self,
+                shape=input_shape[1:],
                 float_precision=float_precision,
                 seed=seed,
             )
-            self.b_weight = new_weights(
-                input_shape[1:],
+            self.b_weight = add_weights(
+                self=self,
+                shape=input_shape[1:],
                 float_precision=float_precision,
                 seed=seed + 1,
             )
 
         elif activation_type == "pgaussian":
-            self.sigma_weight = new_weights(
-                input_shape[1:],
+            self.sigma_weight = add_weights(
+                self=self,
+                shape=input_shape[1:],
                 float_precision=float_precision,
                 seed=seed,
             )
-            self.mu = new_weights(
-                input_shape[1:],
+            self.mu = add_weights(
+                self=self,
+                shape=input_shape[1:],
                 float_precision=float_precision,
                 seed=seed + 1,
             )
 
-    def __call__(self, layer, is_training=None):
+    def call(self, layer, is_training=None):
         """Apply Activation Module.
 
         Parameters
@@ -259,7 +265,10 @@ class Activation(tf.Module):
                     "To use batch normalisation a boolean "
                     "is_training needs to be passed"
                 )
-            layer = self.batch_norm_layer(layer, is_training)
+            layer = self.batch_norm_layer(
+                layer,
+                is_training=is_training,
+            )
 
         if activation_type == "" or activation_type is None:
             return layer
@@ -341,7 +350,7 @@ class Activation(tf.Module):
         return layer
 
 
-class BatchNormWrapper(tf.Module):
+class BatchNormWrapper(tf.keras.layers.Layer):
     """Batch normalisation
 
     Adopted from:
@@ -379,30 +388,34 @@ class BatchNormWrapper(tf.Module):
         norm_shape = input_shape[1:]
         self.epsilon = epsilon
         self.decay = decay
-        self.scale = tf.Variable(
-            tf.ones(norm_shape, dtype=float_precision),
+        self.scale = self.add_weight(
+            shape=norm_shape,
+            initializer=tf.ones,
             name="BN_scale",
             dtype=float_precision,
         )
-        self.beta = tf.Variable(
-            tf.zeros(norm_shape, dtype=float_precision),
+        self.beta = self.add_weight(
+            shape=norm_shape,
+            initializer=tf.zeros,
             name="BN_beta",
             dtype=float_precision,
         )
-        self.pop_mean = tf.Variable(
-            tf.zeros(norm_shape, dtype=float_precision),
+        self.pop_mean = self.add_weight(
+            shape=norm_shape,
+            initializer=tf.zeros,
             trainable=False,
             name="BN_pop_mean",
             dtype=float_precision,
         )
-        self.pop_var = tf.Variable(
-            tf.ones(norm_shape, dtype=float_precision),
+        self.pop_var = self.add_weight(
+            shape=norm_shape,
+            initializer=tf.ones,
             trainable=False,
             name="BN_pop_var",
             dtype=float_precision,
         )
 
-    def __call__(self, inputs, is_training):
+    def call(self, inputs, is_training):
         """Apply Batch Normalization Wrapper
 
         Parameters
