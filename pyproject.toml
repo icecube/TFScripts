@@ -40,8 +40,8 @@ Documentation = "https://github.com/icecube/TFScripts"
 "Bug Tracker" = "https://github.com/icecube/TFScripts/issues"
 Discussions = "https://github.com/icecube/TFScripts/discussions"
 
-[tool.setuptools]
-packages = ["tfscripts"]
+[tool.setuptools.packages]
+find = {}  # Scanning implicit namespaces is active by default, turn off via: namespaces = false
 
 [tool.setuptools.dynamic]
 version = {attr = "tfscripts.__version__"}
