@@ -22,6 +22,7 @@ class SeedCounter(object):
             return None
         else:
             self._seed_state += 1
+            self._seed_state = self._seed_state % 2**32
             return self._seed_state
 
 

@@ -308,7 +308,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
         super(ConvNdLayer, self).__init__(name=name)
 
         # create seed counter
-        cnt = SeedCounter(seed)
+        self.cnt = SeedCounter(seed)
 
         if isinstance(input_shape, tf.TensorShape):
             input_shape = input_shape.as_list()
@@ -372,7 +372,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     self=self,
                     shape=shape,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
 
             # Create new biases, one for each filter.
@@ -381,7 +381,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     self=self,
                     length=num_filters,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
 
             if num_dims == 1 or num_dims == 2 or num_dims == 3:
@@ -431,7 +431,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     kernel=weights,
                     var_list=var_list,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
             elif num_dims == 4:
                 self.conv_layer = hx.ConvHex4d(
@@ -447,7 +447,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     kernel=weights,
                     var_list=var_list,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
 
             # Create new biases, one for each filter.
@@ -456,7 +456,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     self=self,
                     length=num_filters * hex_num_rotations,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
 
         # -------------------
@@ -474,7 +474,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     padding=padding,
                     dilation_rate=dilation_rate,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
             elif num_dims == 2:
                 self.conv_layer = conv.LocallyConnected2d(
@@ -486,7 +486,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     padding=padding,
                     dilation_rate=dilation_rate,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
             elif num_dims == 3:
                 self.conv_layer = conv.LocallyConnected3d(
@@ -498,7 +498,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     padding=padding,
                     dilation_rate=dilation_rate,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
             elif num_dims == 4:
                 raise NotImplementedError(
@@ -512,7 +512,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     shape=self.conv_layer.output_shape[1:],
                     shared_axes=[i for i in range(num_dims)],
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
 
         # -------------------
@@ -573,7 +573,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     self=self,
                     length=num_filters,
                     float_precision=float_precision,
-                    seed=cnt(),
+                    seed=self.cnt(),
                 )
 
         else:
@@ -592,7 +592,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
             input_shape=conv_layer_output.shape,
             use_batch_normalisation=use_batch_normalisation,
             float_precision=float_precision,
-            seed=cnt(),
+            seed=self.cnt(),
         )
 
         # assign and keep track of settings
@@ -622,7 +622,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                 residual_shape=self.output_shape,
                 strides=strides,
                 float_precision=float_precision,
-                seed=cnt(),
+                seed=self.cnt(),
             )
 
     def call(self, inputs, is_training, keep_prob=None):
@@ -723,7 +723,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
         layer = self._apply_pooling(layer)
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.cnt())
 
         return layer
 
@@ -988,7 +988,7 @@ class FCLayer(tf.keras.layers.Layer):
             layer = self.residual_add(input=inputs, residual=layer)
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.cnt())
 
         return layer
 
@@ -1217,7 +1217,7 @@ class ChannelWiseFCLayer(tf.keras.layers.Layer):
             )
 
         if self.use_dropout and is_training:
-            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.seed)
+            layer = tf.nn.dropout(layer, 1 - keep_prob, seed=self.cnt())
 
         return layer
 
@@ -1349,7 +1349,7 @@ class FCLayers(tf.keras.layers.Layer):
             )
 
         # create seed counter
-        cnt = SeedCounter(seed)
+        self.cnt = SeedCounter(seed)
 
         # create layers:
         self.layers = []
@@ -1370,7 +1370,7 @@ class FCLayers(tf.keras.layers.Layer):
                 max_out_size=max_out_size_list[i],
                 repair_std_deviation=repair_std_deviation_list[i],
                 float_precision=float_precision,
-                seed=cnt(),
+                seed=self.cnt(),
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:
@@ -1591,7 +1591,7 @@ class ConvNdLayers(tf.keras.layers.Layer):
             Description
         """
         # create seed counter
-        cnt = SeedCounter(seed)
+        self.cnt = SeedCounter(seed)
 
         num_dims = len(input_shape)
         name = name.format(num_dims - 2)
@@ -1780,7 +1780,7 @@ class ConvNdLayers(tf.keras.layers.Layer):
                 hex_azimuth=hex_azimuth_list[i],
                 hex_zero_out=hex_zero_out_list[i],
                 float_precision=float_precision,
-                seed=cnt(),
+                seed=self.cnt(),
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:
