@@ -920,6 +920,7 @@ class FCLayer(tf.keras.layers.Layer):
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
         self.seed = seed
+        self.cnt = SeedCounter(seed)
 
     def call(self, inputs, is_training, keep_prob):
         """Apply Module.
@@ -1135,6 +1136,7 @@ class ChannelWiseFCLayer(tf.keras.layers.Layer):
         self.repair_std_deviation = repair_std_deviation
         self.float_precision = float_precision
         self.seed = seed
+        self.cnt = SeedCounter(seed)
 
     def call(self, inputs, is_training, keep_prob):
         """Apply Module.
