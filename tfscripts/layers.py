@@ -279,7 +279,7 @@ class ConvNdLayer(tf.Module):
             patch.
         hex_num_rotations : int, optional
             Only used if method == 'hex_convolution'.
-            If num_rotations >= 1: weights of a kernel will be shared over
+            If num_rotations > 1: weights of a kernel will be shared over
             'num_rotations' many rotated versions of that kernel.
         hex_azimuth : None or float or scalar float tf.Tensor
             Only used if method == 'hex_convolution'.
@@ -372,6 +372,7 @@ class ConvNdLayer(tf.Module):
                     shape=shape,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_weights",
                 )
 
             # Create new biases, one for each filter.
@@ -380,6 +381,7 @@ class ConvNdLayer(tf.Module):
                     length=num_filters,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_biases",
                 )
 
             if num_dims == 1 or num_dims == 2 or num_dims == 3:
@@ -430,6 +432,7 @@ class ConvNdLayer(tf.Module):
                     var_list=var_list,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_hex_conv",
                 )
             elif num_dims == 4:
                 self.conv_layer = hx.ConvHex4d(
@@ -446,6 +449,7 @@ class ConvNdLayer(tf.Module):
                     var_list=var_list,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_hex_conv",
                 )
 
             # Create new biases, one for each filter.
@@ -454,6 +458,7 @@ class ConvNdLayer(tf.Module):
                     length=num_filters * hex_num_rotations,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_biases",
                 )
 
         # -------------------
@@ -569,6 +574,7 @@ class ConvNdLayer(tf.Module):
                     length=num_filters,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_biases",
                 )
 
         else:
@@ -857,12 +863,14 @@ class FCLayer(tf.Module):
                 shape=[num_inputs, num_outputs],
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_weights",
             )
         if biases is None:
             biases = new_biases(
                 length=num_outputs,
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_biases",
             )
 
         self.biases = biases
@@ -1070,12 +1078,14 @@ class ChannelWiseFCLayer(tf.Module):
                 shape=[num_channels, num_inputs, num_outputs],
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_weights",
             )
         if biases is None:
             biases = new_weights(
                 shape=[num_outputs, num_channels],
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_biases",
             )
 
         self.biases = biases
@@ -1367,7 +1377,10 @@ class FCLayers(tf.Module):
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:
-                print("{}_{:03d}".format(name, i), layer_i.output_shape)
+                print(
+                    "    {}_{:03d}: ".format(name, i),
+                    list(layer_i.output_shape),
+                )
             self.layers.append(layer_i)
 
     def __call__(self, inputs, is_training, keep_prob=None):
@@ -1553,7 +1566,7 @@ class ConvNdLayers(tf.Module):
             If only one trafo method is given, it will be used for all layers.
         hex_num_rotations_list : int or list of int, optional
             Only used if method == 'hex_convolution'.
-            If num_rotations >= 1: weights of a kernel will be shared over
+            If num_rotations > 1: weights of a kernel will be shared over
             'num_rotations' many rotated versions of that kernel.
             If only one int is give, it will apply to all layers.
         hex_azimuth_list : list of float or list scalar tf.Tensor, optional
@@ -1777,7 +1790,10 @@ class ConvNdLayers(tf.Module):
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:
-                print("{}_{:03d}".format(name, i), layer_i.output_shape)
+                print(
+                    "    {}_{:03d}:".format(name, i),
+                    list(layer_i.output_shape),
+                )
             self.layers.append(layer_i)
 
     def __call__(self, inputs, is_training, keep_prob=None):

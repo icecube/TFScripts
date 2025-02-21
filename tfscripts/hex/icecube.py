@@ -240,7 +240,11 @@ def get_icecube_string_from_hex_coord(a, b):
 
 
 def get_icecube_kernel(
-    shape, get_ones=False, float_precision=FLOAT_PRECISION, seed=None
+    shape,
+    get_ones=False,
+    float_precision=FLOAT_PRECISION,
+    seed=None,
+    name="IceCubeKernel",
 ):
     """
     Get a kernel of shape 'shape' for IceCube where coordinates of no real
@@ -258,6 +262,8 @@ def get_icecube_kernel(
         The tensorflow dtype describing the float precision to use.
     seed : int, optional
         Seed for the random number generator.
+    name : str, optional
+        The name of the kernel.
 
     Returns
     -------
@@ -288,6 +294,7 @@ def get_icecube_kernel(
                         shape,
                         float_precision=float_precision,
                         seed=cnt(),
+                        name=name + f"_weights_{a}_{b}",
                     )
                     var_list.append(weights)
             else:

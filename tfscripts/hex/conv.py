@@ -79,13 +79,14 @@ def get_hex_kernel(
     get_ones=False,
     float_precision=FLOAT_PRECISION,
     seed=None,
+    name="HexKernel",
 ):
     """Get hexagonal convolution kernel
 
     Create Weights for a hexagonal kernel.
     The Kernel will be of a hexagonal shape in the first two dimensions,
     while the other dimensions are normal.
-    The hexagonal kernel is off the shape:
+    The hexagonal kernel is of the shape:
     [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
     But elements with coordinates in the first two dimensions, that don't belong
     to the hexagon are set to a tf.Constant 0.
@@ -199,6 +200,7 @@ def get_hex_kernel(
                             filter_size[2:],
                             float_precision=float_precision,
                             seed=cnt(),
+                            name=name + f"_weights_{a}_{b}",
                         )
                         var_list.append(weights)
                     test_hex_dict[(a, b)] = 1
@@ -243,6 +245,7 @@ def get_hex_kernel(
                             filter_size[2:],
                             float_precision=float_precision,
                             seed=cnt(),
+                            name=name + f"_weights_{a}_{b}",
                         )
                         var_list.append(weights)
                     test_hex_dict[(a, b)] = 1
@@ -328,7 +331,7 @@ class ConvHex(tf.Module):
                 [1, 1, 1, 1, 1]: a stride of 1 is used along all axes.
                 [1, 1, 2, 1, 1]: a stride of 2 is used along the y axis.
         num_rotations : int, optional
-            If num_rotations >= 1: weights of a kernel will be shared over
+            If num_rotations > 1: weights of a kernel will be shared over
                 'num_rotations' many rotated versions of that kernel.
         dilation_rate : None or list of int, optional
             The dilation rate to be used for the layer.
@@ -377,6 +380,7 @@ class ConvHex(tf.Module):
                     azimuth,
                     float_precision=float_precision,
                     seed=seed,
+                    name=self.name + "_kernel",
                 )
             else:
                 if num_rotations > 1:
@@ -385,12 +389,14 @@ class ConvHex(tf.Module):
                         num_rotations,
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
                 else:
                     kernel, var_list = get_hex_kernel(
                         filter_size + [num_channels, num_filters],
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
 
         self.num_filters = num_filters
@@ -454,6 +460,7 @@ class ConvHex(tf.Module):
                     get_ones=True,
                     float_precision=self.float_precision,
                     seed=self.seed,
+                    name=self.name,
                 )
                 result = result * zero_out_matrix
 
@@ -619,6 +626,7 @@ class ConvHex4d(tf.Module):
                     azimuth,
                     float_precision=float_precision,
                     seed=seed,
+                    name=self.name + "_kernel",
                 )
             else:
                 if num_rotations > 1:
@@ -627,12 +635,14 @@ class ConvHex4d(tf.Module):
                         num_rotations,
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
                 else:
                     kernel, var_list = get_hex_kernel(
                         filter_size + [num_channels, num_filters],
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
 
         self.num_filters = num_filters
@@ -718,6 +728,7 @@ def create_conv_hex_layers_weights(
     azimuth_list=None,
     float_precision=FLOAT_PRECISION,
     seed=None,
+    name="HexLayers",
 ):
     """Create weights and biases for conv hex n-dimensional layers with n >= 2
 
@@ -802,11 +813,14 @@ def create_conv_hex_layers_weights(
     weights_list = []
     biases_list = []
     variable_list = []
-    for filter_size, num_filters, num_rotations, azimuth in zip(
-        filter_size_list,
-        num_filters_list,
-        num_rotations_list,
-        azimuth_list,
+
+    for i, (filter_size, num_filters, num_rotations, azimuth) in enumerate(
+        zip(
+            filter_size_list,
+            num_filters_list,
+            num_rotations_list,
+            azimuth_list,
+        )
     ):
         if azimuth is not None:
             kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
@@ -814,6 +828,7 @@ def create_conv_hex_layers_weights(
                 azimuth,
                 float_precision=float_precision,
                 seed=cnt(),
+                name=name + f"_weights_{i}",
             )
         else:
             if num_rotations > 1:
@@ -822,12 +837,14 @@ def create_conv_hex_layers_weights(
                     num_rotations,
                     float_precision=float_precision,
                     seed=cnt(),
+                    name=name + f"_weights_{i}",
                 )
             else:
                 kernel, var_list = get_hex_kernel(
                     filter_size + [num_input_channels, num_filters],
                     float_precision=float_precision,
                     seed=cnt(),
+                    name=name + f"_weights_{i}",
                 )
 
         variable_list.extend(var_list)
@@ -837,6 +854,7 @@ def create_conv_hex_layers_weights(
                 length=num_filters * num_rotations,
                 float_precision=float_precision,
                 seed=cnt(),
+                name=name + f"_biases_{i}",
             )
         )
         num_input_channels = num_filters

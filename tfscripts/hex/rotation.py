@@ -102,6 +102,7 @@ def get_dynamic_rotation_hex_kernel(
     azimuth,
     float_precision=FLOAT_PRECISION,
     seed=None,
+    name="DynamicRotationHexKernel",
 ):
     """Dynamically azimuthally rotated hexagonal kernels.
 
@@ -142,6 +143,8 @@ def get_dynamic_rotation_hex_kernel(
         The tensorflow dtype describing the float precision to use.
     seed : int, optional
         Seed for the random number generator.
+    name : str, optional
+        The name of the operation.
 
     Returns
     -------
@@ -171,6 +174,7 @@ def get_dynamic_rotation_hex_kernel(
         [1] + filter_size[2:],
         float_precision=float_precision,
         seed=cnt(),
+        name=name + "_center_weight",
     )
     var_list.append(center_weight)
     multiples = [tf.shape(input=azimuth)[0]] + [1] * (no_of_dims - 2)
@@ -183,6 +187,7 @@ def get_dynamic_rotation_hex_kernel(
             [6] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights1",
         )
         var_list.append(corner_weights1)
     elif filter_size[0:2] == [2, 1]:
@@ -191,6 +196,7 @@ def get_dynamic_rotation_hex_kernel(
             [6] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights1",
         )
         var_list.append(corner_weights1)
         corner_weights2 = []
@@ -199,6 +205,7 @@ def get_dynamic_rotation_hex_kernel(
                 filter_size[2:],
                 float_precision=float_precision,
                 seed=cnt(),
+                name=name + "_corner_weights2",
             )
             var_list.append(weights)
             corner_weights2.extend([Z, weights])
@@ -209,12 +216,14 @@ def get_dynamic_rotation_hex_kernel(
             [6] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights1",
         )
         var_list.append(corner_weights1)
         corner_weights2 = new_weights(
             [12] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights2",
         )
         var_list.append(corner_weights2)
     elif filter_size[0:2] == [3, 1]:
@@ -223,12 +232,14 @@ def get_dynamic_rotation_hex_kernel(
             [6] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights1",
         )
         var_list.append(corner_weights1)
         corner_weights2 = new_weights(
             [12] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights2",
         )
         var_list.append(corner_weights2)
         corner_weights3 = []
@@ -237,6 +248,7 @@ def get_dynamic_rotation_hex_kernel(
                 filter_size[2:],
                 float_precision=float_precision,
                 seed=cnt(),
+                name=name + f"_corner_weights3_{i}",
             )
             var_list.append(weights)
             corner_weights3.extend([Z, weights, Z])
@@ -247,12 +259,14 @@ def get_dynamic_rotation_hex_kernel(
             [6] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights1",
         )
         var_list.append(corner_weights1)
         corner_weights2 = new_weights(
             [12] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights2",
         )
         var_list.append(corner_weights2)
         corner_weights3 = []
@@ -261,6 +275,7 @@ def get_dynamic_rotation_hex_kernel(
                 filter_size[2:],
                 float_precision=float_precision,
                 seed=cnt(),
+                name=name + f"_corner_weights3_{i}",
             )
             var_list.append(weights)
             corner_weights3.extend([Z, Z, weights])
@@ -271,18 +286,21 @@ def get_dynamic_rotation_hex_kernel(
             [6] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights1",
         )
         var_list.append(corner_weights1)
         corner_weights2 = new_weights(
             [12] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights2",
         )
         var_list.append(corner_weights2)
         corner_weights3 = new_weights(
             [18] + filter_size[2:],
             float_precision=float_precision,
             seed=cnt(),
+            name=name + "_corner_weights3",
         )
         var_list.append(corner_weights3)
     else:
@@ -368,6 +386,7 @@ def get_rotated_hex_kernel(
     num_rotations,
     float_precision=FLOAT_PRECISION,
     seed=None,
+    name="RotatedHexKernel",
 ):
     """
     Create Weights for a hexagonal kernel.
@@ -408,6 +427,8 @@ def get_rotated_hex_kernel(
         The tensorflow dtype describing the float precision to use.
     seed : int, optional
         Seed for the random number generator.
+    name : str, optional
+        The name of the operation.
 
     Returns
     -------
@@ -436,6 +457,7 @@ def get_rotated_hex_kernel(
             filter_size[2:-2],
             float_precision=float_precision,
             seed=cnt(),
+            name=name,
         )
         var_list.append(weights)
         return weights
@@ -498,6 +520,7 @@ def get_rotated_hex_kernel(
         [num_rotations] + filter_size[-2:],
         float_precision=float_precision,
         seed=cnt(),
+        name=name + "_in_out_channel_weights",
     )
     var_list.append(in_out_channel_weights)
 
