@@ -158,7 +158,6 @@ class ConvNdLayer(tf.Module):
         biases=None,
         trafo=None,
         hex_num_rotations=1,
-        hex_azimuth=None,
         hex_zero_out=False,
         float_precision=FLOAT_PRECISION,
         seed=None,
@@ -281,11 +280,6 @@ class ConvNdLayer(tf.Module):
             Only used if method == 'hex_convolution'.
             If num_rotations > 1: weights of a kernel will be shared over
             'num_rotations' many rotated versions of that kernel.
-        hex_azimuth : None or float or scalar float tf.Tensor
-            Only used if method == 'hex_convolution'.
-            Hexagonal kernel is turned by the angle 'azimuth'
-            [given in degrees] in counterclockwise direction.
-            If azimuth is None, the kernel will not be rotated dynamically.
         hex_zero_out : bool, optional
             Only used if method == 'hex_convolution'.
             If True, elements in result tensor which are not part of hexagon or
@@ -425,7 +419,6 @@ class ConvNdLayer(tf.Module):
                     padding=padding,
                     strides=strides,
                     num_rotations=hex_num_rotations,
-                    azimuth=hex_azimuth,
                     dilation_rate=dilation_rate,
                     zero_out=hex_zero_out,
                     kernel=weights,
@@ -442,7 +435,6 @@ class ConvNdLayer(tf.Module):
                     padding=padding,
                     strides=strides,
                     num_rotations=hex_num_rotations,
-                    azimuth=hex_azimuth,
                     dilation_rate=dilation_rate,
                     zero_out=hex_zero_out,
                     kernel=weights,
@@ -1437,7 +1429,6 @@ class ConvNdLayers(tf.Module):
         biases_list=None,
         trafo_list=None,
         hex_num_rotations_list=1,
-        hex_azimuth_list=None,
         hex_zero_out_list=False,
         float_precision=FLOAT_PRECISION,
         seed=None,
@@ -1569,13 +1560,6 @@ class ConvNdLayers(tf.Module):
             If num_rotations > 1: weights of a kernel will be shared over
             'num_rotations' many rotated versions of that kernel.
             If only one int is give, it will apply to all layers.
-        hex_azimuth_list : list of float or list scalar tf.Tensor, optional
-            Only used if method == 'hex_convolution'.
-            Hexagonal kernel is turned by the angle 'azimuth'
-            [given in degrees] in counterclockwise direction.
-            If azimuth is None, the kernel will not be rotated dynamically.
-            If only one azimuth angle is given, all layers will be turned by
-            the same angle.
         hex_zero_out_list : bool or list of bool, optional
             Only used if method == 'hex_convolution'.
             If True, elements in result tensor which are not part of hexagon or
@@ -1746,10 +1730,6 @@ class ConvNdLayers(tf.Module):
                 hex_num_rotations_list for i in range(num_layers)
             ]
 
-        # create hex_azimuth_list
-        if hex_azimuth_list is None or tf.is_tensor(hex_azimuth_list):
-            hex_azimuth_list = [hex_azimuth_list for i in range(num_layers)]
-
         # create hex_zero out array
         if isinstance(hex_zero_out_list, bool):
             hex_zero_out_list = [hex_zero_out_list for i in range(num_layers)]
@@ -1783,7 +1763,6 @@ class ConvNdLayers(tf.Module):
                 biases=biases_list[i],
                 trafo=trafo_list[i],
                 hex_num_rotations=hex_num_rotations_list[i],
-                hex_azimuth=hex_azimuth_list[i],
                 hex_zero_out=hex_zero_out_list[i],
                 float_precision=float_precision,
                 seed=self.cnt(),

@@ -239,69 +239,76 @@ def get_icecube_string_from_hex_coord(a, b):
     return hex_string_coord_dict[(a, b)]
 
 
-def get_icecube_kernel(
-    shape,
-    get_ones=False,
-    float_precision=FLOAT_PRECISION,
-    seed=None,
-    name="IceCubeKernel",
-):
-    """
-    Get a kernel of shape 'shape' for IceCube where coordinates of no real
-    strings are set to constant zeros.
+class IceCubeKernel(tf.Module):
 
-    Parameters
-    ----------
-    shape : list of int
-        The shape of the desired kernel.
-    get_ones : bool, optional
-        If True, returns constant ones for real DOMs, zeros for virtual DOMs.
-        If False, return trainable parameter for real DOMs,
-                zeros for virtual DOMs
-    float_precision : tf.dtype, optional
-        The tensorflow dtype describing the float precision to use.
-    seed : int, optional
-        Seed for the random number generator.
-    name : str, optional
-        The name of the kernel.
+    def __init__(
+        self,
+        shape,
+        get_ones=False,
+        float_precision=FLOAT_PRECISION,
+        seed=None,
+        name="IceCubeKernel",
+    ):
+        """
+        Get a kernel of shape 'shape' for IceCube where coordinates of no real
+        strings are set to constant zeros.
 
-    Returns
-    -------
-    tf.Tensor
-        The icecube kernel with the desired shape.
-    list of tf.Variable
-        A list of tensorflow variables created in this function
-    """
-    # create seed counter
-    cnt = SeedCounter(seed)
+        Parameters
+        ----------
+        shape : list of int
+            The shape of the desired kernel.
+        get_ones : bool, optional
+            If True, returns constant ones for real DOMs, zeros for virtual DOMs.
+            If False, return trainable parameter for real DOMs,
+                    zeros for virtual DOMs
+        float_precision : tf.dtype, optional
+            The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
+        name : str, optional
+            The name of the kernel.
 
-    zeros = tf.zeros(shape, dtype=float_precision)
-    ones = tf.ones(shape, dtype=float_precision)
+        Returns
+        -------
+        tf.Tensor
+            The icecube kernel with the desired shape.
+        list of tf.Variable
+            A list of tensorflow variables created in this function
+        """
+        # create seed counter
+        cnt = SeedCounter(seed)
 
-    var_list = []
-    a_list = []
-    for a in range(-4, 6):
+        zeros = tf.zeros(shape, dtype=float_precision)
+        ones = tf.ones(shape, dtype=float_precision)
 
-        b_list = []
-        for b in range(-5, 5):
+        self.var_list = []
+        self.a_list = []
+        for a in range(-4, 6):
 
-            if (a, b) in hex_string_coord_dict.keys():
-                # String exists
-                if get_ones:
-                    weights = ones
+            b_list = []
+            for b in range(-5, 5):
+
+                if (a, b) in hex_string_coord_dict.keys():
+                    # String exists
+                    if get_ones:
+                        weights = ones
+                    else:
+                        weights = new_weights(
+                            shape,
+                            float_precision=float_precision,
+                            seed=cnt(),
+                            name=name + f"_weights_{a}_{b}",
+                        )
+                        self.var_list.append(weights)
                 else:
-                    weights = new_weights(
-                        shape,
-                        float_precision=float_precision,
-                        seed=cnt(),
-                        name=name + f"_weights_{a}_{b}",
-                    )
-                    var_list.append(weights)
-            else:
-                # virtual string, string does not actually exist
-                weights = zeros
+                    # virtual string, string does not actually exist
+                    weights = zeros
 
-            b_list.append(weights)
-    a_list.append(tf.stack(b_list))
-    icecube_kernel = tf.stack(a_list)
-    return icecube_kernel, var_list
+                b_list.append(weights)
+            self.a_list.append(b_list)
+
+    def __call__(self):
+        """Get the icecube kernel"""
+        a_list = [tf.stack(b_list) for b_list in self.a_list]
+        icecube_kernel = tf.stack(a_list)
+        return icecube_kernel
