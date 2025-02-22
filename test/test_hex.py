@@ -809,13 +809,6 @@ class TestHexKernels(unittest.TestCase):
             )
             kernel = kernel_obj(azimuth=test["azimuth"])
             var_list = kernel_obj.var_list
-            # kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
-            #     filter_size=test["filter_size"],
-            #     azimuth=test["azimuth"],
-            #     float_precision="float32",
-            #     seed=42,
-            #     name="DynamicRotationHexKernel",
-            # )
 
             self.assertEqual(len(var_list), test["n_vars"])
             self.assertTrue(np.allclose(test["kernel"], kernel, atol=1e-6))
