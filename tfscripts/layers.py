@@ -158,7 +158,6 @@ class ConvNdLayer(tf.keras.layers.Layer):
         biases=None,
         trafo=None,
         hex_num_rotations=1,
-        hex_azimuth=None,
         hex_zero_out=False,
         float_precision=FLOAT_PRECISION,
         seed=None,
@@ -279,13 +278,8 @@ class ConvNdLayer(tf.keras.layers.Layer):
             patch.
         hex_num_rotations : int, optional
             Only used if method == 'hex_convolution'.
-            If num_rotations >= 1: weights of a kernel will be shared over
+            If num_rotations > 1: weights of a kernel will be shared over
             'num_rotations' many rotated versions of that kernel.
-        hex_azimuth : None or float or scalar float tf.Tensor
-            Only used if method == 'hex_convolution'.
-            Hexagonal kernel is turned by the angle 'azimuth'
-            [given in degrees] in counterclockwise direction.
-            If azimuth is None, the kernel will not be rotated dynamically.
         hex_zero_out : bool, optional
             Only used if method == 'hex_convolution'.
             If True, elements in result tensor which are not part of hexagon or
@@ -373,6 +367,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     shape=shape,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_weights",
                 )
 
             # Create new biases, one for each filter.
@@ -382,6 +377,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     length=num_filters,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_biases",
                 )
 
             if num_dims == 1 or num_dims == 2 or num_dims == 3:
@@ -425,13 +421,13 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     padding=padding,
                     strides=strides,
                     num_rotations=hex_num_rotations,
-                    azimuth=hex_azimuth,
                     dilation_rate=dilation_rate,
                     zero_out=hex_zero_out,
                     kernel=weights,
                     var_list=var_list,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_hex_conv",
                 )
             elif num_dims == 4:
                 self.conv_layer = hx.ConvHex4d(
@@ -441,13 +437,13 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     padding=padding,
                     strides=strides,
                     num_rotations=hex_num_rotations,
-                    azimuth=hex_azimuth,
                     dilation_rate=dilation_rate,
                     zero_out=hex_zero_out,
                     kernel=weights,
                     var_list=var_list,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_hex_conv",
                 )
 
             # Create new biases, one for each filter.
@@ -457,6 +453,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     length=num_filters * hex_num_rotations,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_biases",
                 )
 
         # -------------------
@@ -574,6 +571,7 @@ class ConvNdLayer(tf.keras.layers.Layer):
                     length=num_filters,
                     float_precision=float_precision,
                     seed=self.cnt(),
+                    name=self.name + "_biases",
                 )
 
         else:
@@ -863,6 +861,7 @@ class FCLayer(tf.keras.layers.Layer):
                 shape=[num_inputs, num_outputs],
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_weights",
             )
         if biases is None:
             biases = add_biases(
@@ -870,6 +869,7 @@ class FCLayer(tf.keras.layers.Layer):
                 length=num_outputs,
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_biases",
             )
 
         self.biases = biases
@@ -1078,6 +1078,7 @@ class ChannelWiseFCLayer(tf.keras.layers.Layer):
                 shape=[num_channels, num_inputs, num_outputs],
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_weights",
             )
         if biases is None:
             biases = add_weights(
@@ -1085,6 +1086,7 @@ class ChannelWiseFCLayer(tf.keras.layers.Layer):
                 shape=[num_outputs, num_channels],
                 float_precision=float_precision,
                 seed=seed,
+                name=self.name + "_biases",
             )
 
         self.biases = biases
@@ -1376,7 +1378,10 @@ class FCLayers(tf.keras.layers.Layer):
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:
-                print("{}_{:03d}".format(name, i), layer_i.output_shape)
+                print(
+                    "    {}_{:03d}: ".format(name, i),
+                    list(layer_i.output_shape),
+                )
             self.layers.append(layer_i)
 
     def call(self, inputs, is_training, keep_prob=None):
@@ -1433,7 +1438,6 @@ class ConvNdLayers(tf.keras.layers.Layer):
         biases_list=None,
         trafo_list=None,
         hex_num_rotations_list=1,
-        hex_azimuth_list=None,
         hex_zero_out_list=False,
         float_precision=FLOAT_PRECISION,
         seed=None,
@@ -1562,16 +1566,9 @@ class ConvNdLayers(tf.keras.layers.Layer):
             If only one trafo method is given, it will be used for all layers.
         hex_num_rotations_list : int or list of int, optional
             Only used if method == 'hex_convolution'.
-            If num_rotations >= 1: weights of a kernel will be shared over
+            If num_rotations > 1: weights of a kernel will be shared over
             'num_rotations' many rotated versions of that kernel.
             If only one int is give, it will apply to all layers.
-        hex_azimuth_list : list of float or list scalar tf.Tensor, optional
-            Only used if method == 'hex_convolution'.
-            Hexagonal kernel is turned by the angle 'azimuth'
-            [given in degrees] in counterclockwise direction.
-            If azimuth is None, the kernel will not be rotated dynamically.
-            If only one azimuth angle is given, all layers will be turned by
-            the same angle.
         hex_zero_out_list : bool or list of bool, optional
             Only used if method == 'hex_convolution'.
             If True, elements in result tensor which are not part of hexagon or
@@ -1742,10 +1739,6 @@ class ConvNdLayers(tf.keras.layers.Layer):
                 hex_num_rotations_list for i in range(num_layers)
             ]
 
-        # create hex_azimuth_list
-        if hex_azimuth_list is None or tf.is_tensor(hex_azimuth_list):
-            hex_azimuth_list = [hex_azimuth_list for i in range(num_layers)]
-
         # create hex_zero out array
         if isinstance(hex_zero_out_list, bool):
             hex_zero_out_list = [hex_zero_out_list for i in range(num_layers)]
@@ -1779,14 +1772,16 @@ class ConvNdLayers(tf.keras.layers.Layer):
                 biases=biases_list[i],
                 trafo=trafo_list[i],
                 hex_num_rotations=hex_num_rotations_list[i],
-                hex_azimuth=hex_azimuth_list[i],
                 hex_zero_out=hex_zero_out_list[i],
                 float_precision=float_precision,
                 seed=self.cnt(),
                 name="{}_{:03d}".format(name, i),
             )
             if verbose:
-                print("{}_{:03d}".format(name, i), layer_i.output_shape)
+                print(
+                    "    {}_{:03d}:".format(name, i),
+                    list(layer_i.output_shape),
+                )
             self.layers.append(layer_i)
 
     def call(self, inputs, is_training, keep_prob=None):

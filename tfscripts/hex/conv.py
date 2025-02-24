@@ -14,10 +14,10 @@ import tensorflow as tf
 
 # tfscripts specific imports
 from tfscripts.utils import SeedCounter
-from tfscripts.weights import new_weights, new_biases
+from tfscripts.weights import new_weights
 from tfscripts.hex.visual import print_hex_data
 from tfscripts.hex import rotation
-from tfscripts.hex.icecube import get_icecube_kernel
+from tfscripts.hex.icecube import IceCubeKernel
 from tfscripts.conv import dynamic_conv, conv4d_stacked
 
 # constants
@@ -73,189 +73,200 @@ def hex_distance(h1, h2):
     return (abs(a1 - a2) + abs(b1 - b2) + abs(c1 - c2)) / 2
 
 
-def get_hex_kernel(
-    filter_size,
-    print_kernel=False,
-    get_ones=False,
-    float_precision=FLOAT_PRECISION,
-    seed=None,
-):
-    """Get hexagonal convolution kernel
+class HexKernel(tf.Module):
+    """Hexagonal convolution kernel"""
 
-    Create Weights for a hexagonal kernel.
-    The Kernel will be of a hexagonal shape in the first two dimensions,
-    while the other dimensions are normal.
-    The hexagonal kernel is off the shape:
-    [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
-    But elements with coordinates in the first two dimensions, that don't belong
-    to the hexagon are set to a tf.Constant 0.
+    def __init__(
+        self,
+        filter_size,
+        get_ones=False,
+        float_precision=FLOAT_PRECISION,
+        seed=None,
+        name="HexKernel",
+    ):
+        """Get hexagonal convolution kernel
 
-    The hexagon is defined by filter_size[0:2].
-    filter_size[0] defines the size of the hexagon and
-    filter_size[1] the orientation.
+        Create Weights for a hexagonal kernel.
+        The Kernel will be of a hexagonal shape in the first two dimensions,
+        while the other dimensions are normal.
+        The hexagonal kernel is of the shape:
+        [kernel_edge_points, kernel_edge_points, *filter_size[2:]]
+        But elements with coordinates in the first two dimensions, that don't belong
+        to the hexagon are set to a tf.Constant 0.
 
-    Parameters
-    ----------
-    filter_size : A list of int
-        filter_size = [s, o, 3. dim(e.g. z), 4. dim(e.g. t),...]
-        s: size of hexagon
-        o: orientation of hexagon
+        The hexagon is defined by filter_size[0:2].
+        filter_size[0] defines the size of the hexagon and
+        filter_size[1] the orientation.
 
-        Examples:
+        Parameters
+        ----------
+        filter_size : A list of int
+            filter_size = [s, o, 3. dim(e.g. z), 4. dim(e.g. t),...]
+            s: size of hexagon
+            o: orientation of hexagon
 
-                  s = 2, o = 0:
-                                    1   1   0             1  1
+            Examples:
 
-                                 1   1   1             1   1   1
+                    s = 2, o = 0:
+                                        1   1   0             1  1
 
-                               0   1   1                 1   1
+                                    1   1   1             1   1   1
 
-                  s = 3, o = 2:
-                          0   1   0   0   0   0   0               1
+                                0   1   1                 1   1
 
-                       0   1   1   1   1   0   0               1   1   1   1
+                    s = 3, o = 2:
+                            0   1   0   0   0   0   0               1
 
-                     1   1   1   1   1   0   0           1   1   1   1   1
+                        0   1   1   1   1   0   0               1   1   1   1
 
-                   0   1   1   1   1   1   0               1   1   1   1   1
+                        1   1   1   1   1   0   0           1   1   1   1   1
 
-                 0   0   1   1   1   1   1                   1   1   1   1   1
+                    0   1   1   1   1   1   0               1   1   1   1   1
 
-               0   0   1   1   1   1   0                    1   1   1   1
+                    0   0   1   1   1   1   1                   1   1   1   1   1
 
-             0   0   0   0   0   1   0                               1
+                0   0   1   1   1   1   0                    1   1   1   1
 
-    print_kernel : bool.
-      True: print first two dimensions of kernel.
+                0   0   0   0   0   1   0                               1
+
+        get_ones : bool, optional
+            If True, returns constant ones for elements in hexagon.
+            If False, return trainable tf.tensor for elements in hexagon.
+            In both cases, constant zeros are returned for elements outside of
+            hexagon.
+        float_precision : tf.dtype, optional
+            The tensorflow dtype describing the float precision to use.
+        seed : int, optional
+            Seed for the random number generator.
+
+        Returns
+        -------
+        tf.Tensor
+            A Tensor with shape: [ s, s, *filter_size[2:] ]
+            where s = 2*filter_size[0] -1 if x == o
+                                [hexagon is parallel to axis of first dimension]
+                    = 2*filter_size[0] +1 if x != o
+                            [hexagon is tilted to axis of first dimension]
+        list of tf.Variable
+            A list of tensorflow variables created in this function
+
+        Raises
+        ------
+        ValueError
+            Description
+        """
+        # create seed counter
+        cnt = SeedCounter(seed)
+
+        k = filter_size[0]
+        x = filter_size[1]
+
+        if x >= k:
+            raise ValueError(
+                "HexKernel: filter_size (k,x,z) must fulfill "
+                "x < k: ({}, {}, {})".format(k, x, filter_size[2])
+            )
+        if x == 0:
+            kernel_edge_points = 2 * k - 1
+        else:
+            kernel_edge_points = 2 * k + 1
+
+        zeros = tf.zeros(filter_size[2:], dtype=float_precision)
+        ones = tf.ones(filter_size[2:], dtype=float_precision)
+
+        self.var_list = []
+        self.a_list = []
+        self.test_hex_dict = {}
+        for a in range(kernel_edge_points):
+            b_list = []
+            for b in range(kernel_edge_points):
+
+                # -------------------------
+                # regular aligned hexagons
+                # -------------------------
+                if x == 0:
+                    if a + b < k - 1 or a + b > 3 * k - 3:
+                        weights = zeros
+                        self.test_hex_dict[(a, b)] = 0
+                    else:
+                        if get_ones:
+                            weights = ones
+                        else:
+                            weights = new_weights(
+                                filter_size[2:],
+                                float_precision=float_precision,
+                                seed=cnt(),
+                                name=name + f"_weights_{a}_{b}",
+                            )
+                            self.var_list.append(weights)
+                        self.test_hex_dict[(a, b)] = 1
+
+                # -------------------------
+                # tilted hexagons
+                # -------------------------
+                else:
+                    inHexagon = False
+                    # check if inside normal k.0 aligned hexagon
+                    #   |----inside normal k.0 rhombus -----------|
+                    if (
+                        (a > 0 and a < 2 * k)
+                        and (b > 0 and b < 2 * k)
+                        and
+                        #   |--in k.0 aligned hexagon-|
+                        (a + b > k and a + b < 3 * k)
+                    ):
+
+                        if a + b > k and a + b < 3 * k:
+                            inHexagon = True
+                    else:
+                        # add 6 additional edges outside of k.0 aligned hexagon
+                        if a == 2 * k - x and b == 0:  # Edge 1
+                            inHexagon = True
+                        elif a == k - x and b == x:  # Edge 2
+                            inHexagon = True
+                        elif a == 0 and b == k + x:  # Edge 3
+                            inHexagon = True
+                        elif a == x and b == 2 * k:  # Edge 4
+                            inHexagon = True
+                        elif a == k + x and b == 2 * k - x:  # Edge 5
+                            inHexagon = True
+                        elif a == 2 * k and b == k - x:  # Edge 6
+                            inHexagon = True
+                    # get weights or constant 0 depending on if point is in hexagon
+                    if inHexagon:
+                        if get_ones:
+                            weights = ones
+                        else:
+                            weights = new_weights(
+                                filter_size[2:],
+                                float_precision=float_precision,
+                                seed=cnt(),
+                                name=name + f"_weights_{a}_{b}",
+                            )
+                            self.var_list.append(weights)
+                        self.test_hex_dict[(a, b)] = 1
+                    else:
+                        weights = zeros
+                        self.test_hex_dict[(a, b)] = 0
+
+                b_list.append(weights)
+            self.a_list.append(b_list)
+
+    def print_kernel(self):
+        """Print the hexagonal kernel
+
+        Print first two dimensions of kernel.
             0 represents a const 0 Tensor of shape filter_size[2:]
             1 represents a trainable Tensor of shape filter_size[2:]
             This can be used to verify the shape of the hex kernel
-      False: do not print
+        """
+        print_hex_data(self.test_hex_dict)
 
-    get_ones : bool, optional
-        If True, returns constant ones for elements in hexagon.
-        If False, return trainable tf.tensor for elements in hexagon.
-        In both cases, constant zeros are returned for elements outside of
-        hexagon.
-    float_precision : tf.dtype, optional
-        The tensorflow dtype describing the float precision to use.
-    seed : int, optional
-        Seed for the random number generator.
-
-    Returns
-    -------
-    tf.Tensor
-        A Tensor with shape: [ s, s, *filter_size[2:] ]
-        where s = 2*filter_size[0] -1 if x == o
-                            [hexagon is parallel to axis of first dimension]
-                = 2*filter_size[0] +1 if x != o
-                         [hexagon is tilted to axis of first dimension]
-    list of tf.Variable
-        A list of tensorflow variables created in this function
-
-    Raises
-    ------
-    ValueError
-        Description
-    """
-    # create seed counter
-    cnt = SeedCounter(seed)
-
-    k = filter_size[0]
-    x = filter_size[1]
-
-    if x >= k:
-        raise ValueError(
-            "get_hex_kernel: filter_size (k,x,z) must fulfill "
-            "x < k: ({}, {}, {})".format(k, x, filter_size[2])
-        )
-    if x == 0:
-        kernel_edge_points = 2 * k - 1
-    else:
-        kernel_edge_points = 2 * k + 1
-
-    zeros = tf.zeros(filter_size[2:], dtype=float_precision)
-    ones = tf.ones(filter_size[2:], dtype=float_precision)
-
-    var_list = []
-    a_list = []
-    test_hex_dict = {}
-    for a in range(kernel_edge_points):
-        b_list = []
-        for b in range(kernel_edge_points):
-
-            # -------------------------
-            # regular aligned hexagons
-            # -------------------------
-            if x == 0:
-                if a + b < k - 1 or a + b > 3 * k - 3:
-                    weights = zeros
-                    test_hex_dict[(a, b)] = 0
-                else:
-                    if get_ones:
-                        weights = ones
-                    else:
-                        weights = new_weights(
-                            filter_size[2:],
-                            float_precision=float_precision,
-                            seed=cnt(),
-                        )
-                        var_list.append(weights)
-                    test_hex_dict[(a, b)] = 1
-
-            # -------------------------
-            # tilted hexagons
-            # -------------------------
-            else:
-                inHexagon = False
-                # check if inside normal k.0 aligned hexagon
-                #   |----inside normal k.0 rhombus -----------|
-                if (
-                    (a > 0 and a < 2 * k)
-                    and (b > 0 and b < 2 * k)
-                    and
-                    #   |--in k.0 aligned hexagon-|
-                    (a + b > k and a + b < 3 * k)
-                ):
-
-                    if a + b > k and a + b < 3 * k:
-                        inHexagon = True
-                else:
-                    # add 6 additional edges outside of k.0 aligned hexagon
-                    if a == 2 * k - x and b == 0:  # Edge 1
-                        inHexagon = True
-                    elif a == k - x and b == x:  # Edge 2
-                        inHexagon = True
-                    elif a == 0 and b == k + x:  # Edge 3
-                        inHexagon = True
-                    elif a == x and b == 2 * k:  # Edge 4
-                        inHexagon = True
-                    elif a == k + x and b == 2 * k - x:  # Edge 5
-                        inHexagon = True
-                    elif a == 2 * k and b == k - x:  # Edge 6
-                        inHexagon = True
-                # get weights or constant 0 depending on if point is in hexagon
-                if inHexagon:
-                    if get_ones:
-                        weights = ones
-                    else:
-                        weights = new_weights(
-                            filter_size[2:],
-                            float_precision=float_precision,
-                            seed=cnt(),
-                        )
-                        var_list.append(weights)
-                    test_hex_dict[(a, b)] = 1
-                else:
-                    weights = zeros
-                    test_hex_dict[(a, b)] = 0
-
-            b_list.append(weights)
-        a_list.append(tf.stack(b_list))
-    hexKernel = tf.stack(a_list)
-    if print_kernel:
-        print_hex_data(test_hex_dict)
-    return hexKernel, var_list
+    def __call__(self):
+        """Get the hexagonal kernel"""
+        a_list = [tf.stack(b_list) for b_list in self.a_list]
+        hex_kernel = tf.stack(a_list)
+        return hex_kernel
 
 
 class ConvHex(tf.keras.layers.Layer):
@@ -273,7 +284,7 @@ class ConvHex(tf.keras.layers.Layer):
         zero_out=False,
         kernel=None,
         var_list=None,
-        azimuth=None,
+        turn_azimuth=False,
         float_precision=FLOAT_PRECISION,
         seed=None,
         name=None,
@@ -328,7 +339,7 @@ class ConvHex(tf.keras.layers.Layer):
                 [1, 1, 1, 1, 1]: a stride of 1 is used along all axes.
                 [1, 1, 2, 1, 1]: a stride of 2 is used along the y axis.
         num_rotations : int, optional
-            If num_rotations >= 1: weights of a kernel will be shared over
+            If num_rotations > 1: weights of a kernel will be shared over
                 'num_rotations' many rotated versions of that kernel.
         dilation_rate : None or list of int, optional
             The dilation rate to be used for the layer.
@@ -347,9 +358,10 @@ class ConvHex(tf.keras.layers.Layer):
         var_list : list of tf.Variables, optional
             A list of Variables of which the kernel is created from. This must
             only be provided (and only if) the parameter 'kernel' is not None.
-        azimuth : float or scalar float tf.Tensor
-            Hexagonal kernel is turned by the angle 'azimuth'
-            [given in degrees] in counterclockwise direction
+        turn_azimuth : bool, optional
+            If True, the kernel will be turned by the angle 'azimuth' in
+            counterclockwise direction. The azimuth is given in degrees
+            and must be provided in the __call__ method.
         float_precision : tf.dtype, optional
             The tensorflow dtype describing the float precision to use.
         seed : int, optional
@@ -363,6 +375,12 @@ class ConvHex(tf.keras.layers.Layer):
             Input data.
         """
         super(ConvHex, self).__init__(name=name)
+        self.turn_azimuth = turn_azimuth
+
+        if kernel is None and var_list is not None:
+            raise ValueError(
+                "ConvHex: var_list must be empty if kernel is None."
+            )
 
         # make sure it is a 2d or 3d convolution
         assert len(input_shape) == 4 or len(input_shape) == 5
@@ -371,27 +389,39 @@ class ConvHex(tf.keras.layers.Layer):
         num_channels = input_shape[-1]
 
         if kernel is None:
-            if azimuth is not None and filter_size[:2] != [1, 0]:
-                kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
+            if self.turn_azimuth and filter_size[:2] != [1, 0]:
+                kernel_obj = rotation.DynamicRotationHexKernel(
                     filter_size + [num_channels, num_filters],
-                    azimuth,
                     float_precision=float_precision,
                     seed=seed,
+                    name=self.name + "_kernel",
                 )
+                var_list = kernel_obj.var_list
             else:
                 if num_rotations > 1:
-                    kernel, var_list = rotation.get_rotated_hex_kernel(
+                    kernel_obj = rotation.RotatedHexKernel(
                         filter_size + [num_channels, num_filters],
                         num_rotations,
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
+                    var_list = kernel_obj.var_list
                 else:
-                    kernel, var_list = get_hex_kernel(
+                    kernel_obj = HexKernel(
                         filter_size + [num_channels, num_filters],
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
+                    var_list = kernel_obj.var_list
+        else:
+
+            def kernel_obj():
+                return kernel
+
+            if var_list is None:
+                var_list = []
 
         self.num_filters = num_filters
         self.filter_size = filter_size
@@ -400,19 +430,21 @@ class ConvHex(tf.keras.layers.Layer):
         self.num_rotations = num_rotations
         self.dilation_rate = dilation_rate
         self.zero_out = zero_out
-        self.azimuth = azimuth
         self.float_precision = float_precision
         self.seed = seed
-        self.kernel = kernel
+        self.kernel_obj = kernel_obj
         self.kernel_var_list = var_list
 
-    def call(self, inputs):
+    def call(self, inputs, azimuth=None):
         """Apply ConvHex Module.
 
         Parameters
         ----------
         inputs : tf.Tensor
             Input tensor.
+        azimuth : float or scalar float tf.Tensor
+            Hexagonal kernel is turned by the angle 'azimuth'
+            [given in degrees] in counterclockwise direction
 
         Returns
         -------
@@ -421,8 +453,9 @@ class ConvHex(tf.keras.layers.Layer):
         """
         # sanity check to make sure that keras collected tf.Variable
         if len(self.variables) < len(self.kernel_var_list):
+
             raise ValueError(
-                "ConvHex4d: Variables not collected by keras. "
+                "ConvHex: Variables not collected by keras. "
                 "This is an issue that underlying trainable variables "
                 "created via tf.Variable are not collected by keras. "
             )
@@ -432,10 +465,10 @@ class ConvHex(tf.keras.layers.Layer):
         # make sure it is a 2d or 3d convolution
         assert len(inputs.get_shape()) == 4 or len(inputs.get_shape()) == 5
 
-        if self.azimuth is not None and self.filter_size[:2] != [1, 0]:
+        if self.turn_azimuth and self.filter_size[:2] != [1, 0]:
             result = dynamic_conv(
                 inputs=inputs,
-                filters=self.kernel,
+                filters=self.kernel_obj(azimuth),
                 strides=self.strides[1:-1],
                 padding=self.padding,
                 dilation_rate=self.dilation_rate,
@@ -443,7 +476,7 @@ class ConvHex(tf.keras.layers.Layer):
         else:
             result = tf.nn.convolution(
                 input=inputs,
-                filters=self.kernel,
+                filters=self.kernel_obj(),
                 strides=self.strides[1:-1],
                 padding=self.padding,
                 dilations=self.dilation_rate,
@@ -457,12 +490,15 @@ class ConvHex(tf.keras.layers.Layer):
                 logger = logging.getLogger(__name__)
                 logger.warning("Assuming IceCube shape for layer", result)
 
-                zero_out_matrix, var_list = get_icecube_kernel(
+                kernel_obj = IceCubeKernel(
                     result.get_shape().as_list()[3:],
                     get_ones=True,
                     float_precision=self.float_precision,
                     seed=self.seed,
+                    name=self.name,
                 )
+                zero_out_matrix = kernel_obj()
+                var_list = kernel_obj.var_list
                 result = result * zero_out_matrix
 
                 # Make sure there were no extra variables created.
@@ -471,7 +507,7 @@ class ConvHex(tf.keras.layers.Layer):
 
             else:
                 # Generic hexagonal shape
-                zero_out_matrix, var_list = get_hex_kernel(
+                kernel_obj = HexKernel(
                     [
                         (result.get_shape().as_list()[1] + 1) // 2,
                         0,
@@ -482,6 +518,8 @@ class ConvHex(tf.keras.layers.Layer):
                     float_precision=self.float_precision,
                     seed=self.seed,
                 )
+                zero_out_matrix = kernel_obj()
+                var_list = kernel_obj.var_list
 
                 # Make sure there were no extra variables created.
                 # These would have to be saved to tf.Module, to allow tracking
@@ -515,7 +553,7 @@ class ConvHex4d(tf.keras.layers.Layer):
         dilation_rate=None,
         kernel=None,
         var_list=None,
-        azimuth=None,
+        turn_azimuth=False,
         stack_axis=None,
         zero_out=False,
         float_precision=FLOAT_PRECISION,
@@ -589,9 +627,10 @@ class ConvHex4d(tf.keras.layers.Layer):
         var_list : list of tf.Variables, optional
             A list of Variables of which the kernel is created from. This must
             only be provided (and only if) the parameter 'kernel' is not None.
-        azimuth : float or scalar float tf.Tensor
-            Hexagonal kernel is turned by the angle 'azimuth'
-            [given in degrees] in counterclockwise direction
+        turn_azimuth : bool, optional
+            If True, the kernel will be turned by the angle 'azimuth' in
+            counterclockwise direction. The azimuth is given in degrees
+            and must be provided in the __call__ method.
         stack_axis : Int
               Axis along which the convolutions will be stacked.
               By default the axis with the lowest output dimensionality will be
@@ -614,6 +653,8 @@ class ConvHex4d(tf.keras.layers.Layer):
         """
         super(ConvHex4d, self).__init__(name=name)
 
+        self.turn_azimuth = turn_azimuth
+
         # make sure it is a 4d convolution
         assert len(input_shape) == 6
 
@@ -621,27 +662,36 @@ class ConvHex4d(tf.keras.layers.Layer):
         num_channels = input_shape[5]
 
         if kernel is None:
-            if azimuth is not None:
-                kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
+            if self.turn_azimuth:
+                kernel_obj = HexKernel(
                     filter_size + [num_channels, num_filters],
-                    azimuth,
                     float_precision=float_precision,
                     seed=seed,
+                    name=self.name + "_kernel",
                 )
+                var_list = kernel_obj.var_list
             else:
                 if num_rotations > 1:
-                    kernel, var_list = rotation.get_rotated_hex_kernel(
+                    kernel_obj = rotation.RotatedHexKernel(
                         filter_size + [num_channels, num_filters],
                         num_rotations,
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
+                    var_list = kernel_obj.var_list
                 else:
-                    kernel, var_list = get_hex_kernel(
+                    kernel_obj = HexKernel(
                         filter_size + [num_channels, num_filters],
                         float_precision=float_precision,
                         seed=seed,
+                        name=self.name + "_kernel",
                     )
+                    var_list = kernel_obj.var_list
+        else:
+
+            def kernel_obj():
+                return kernel
 
         self.num_filters = num_filters
         self.filter_size = filter_size
@@ -649,21 +699,23 @@ class ConvHex4d(tf.keras.layers.Layer):
         self.strides = strides
         self.num_rotations = num_rotations
         self.dilation_rate = dilation_rate
-        self.azimuth = azimuth
         self.stack_axis = stack_axis
         self.zero_out = zero_out
         self.float_precision = float_precision
         self.seed = seed
-        self.kernel = kernel
+        self.kernel_obj = kernel_obj
         self.kernel_var_list = var_list
 
-    def call(self, inputs):
+    def call(self, inputs, azimuth=None):
         """Apply ConvHex4d Module.
 
         Parameters
         ----------
         inputs : tf.Tensor
             Input tensor.
+        azimuth : float or scalar float tf.Tensor
+            Hexagonal kernel is turned by the angle 'azimuth'
+            [given in degrees] in counterclockwise direction
 
         Returns
         -------
@@ -683,10 +735,15 @@ class ConvHex4d(tf.keras.layers.Layer):
         # make sure it is a 4d convolution
         assert len(inputs.get_shape()) == 6
 
+        if self.turn_azimuth is not None:
+            kernel = self.kernel_obj(azimuth)
+        else:
+            kernel = self.kernel_obj()
+
         # convolve with tf conv4d_stacked
         result = conv4d_stacked(
             input=inputs,
-            filter=self.kernel,
+            filter=kernel,
             strides=self.strides,
             padding=self.padding,
             dilation_rate=self.dilation_rate,
@@ -695,7 +752,7 @@ class ConvHex4d(tf.keras.layers.Layer):
 
         # zero out elements that don't belong on hexagon
         if self.zero_out:
-            zero_out_matrix, var_list = get_hex_kernel(
+            kernel_obj = HexKernel(
                 [
                     int((result.get_shape().as_list()[1] + 1) / 2),
                     0,
@@ -707,6 +764,8 @@ class ConvHex4d(tf.keras.layers.Layer):
                 float_precision=self.float_precision,
                 seed=self.seed,
             )
+            zero_out_matrix = kernel_obj()
+            var_list = kernel_obj.var_list
 
             # Make sure there were no extra variables created.
             # These would have to be saved to tf.Module, to allow tracking
@@ -724,137 +783,3 @@ class ConvHex4d(tf.keras.layers.Layer):
                 )
 
         return result
-
-
-def create_conv_hex_layers_weights(
-    num_input_channels,
-    filter_size_list,
-    num_filters_list,
-    num_rotations_list=1,
-    azimuth_list=None,
-    float_precision=FLOAT_PRECISION,
-    seed=None,
-):
-    """Create weights and biases for conv hex n-dimensional layers with n >= 2
-
-    Parameters
-    ----------
-    num_input_channels : int
-        Number of channels of input layer.
-    filter_size_list : list of int or list of list of int
-        A list of filter sizes.
-        If only one filter_size is given, this will be used for all layers.
-        filter_size : A list of int
-        filter_size = [s, o, 3. dim(e.g. z), 4. dim(e.g. t),...]
-        s: size of hexagon
-        o: orientation of hexagon
-
-        Examples:
-
-                  s = 2, o = 0:
-                                    1   1   0             1  1
-
-                                 1   1   1             1   1   1
-
-                               0   1   1                 1   1
-
-                  s = 3, o = 2:
-                          0   1   0   0   0   0   0               1
-
-                       0   1   1   1   1   0   0               1   1   1   1
-
-                     1   1   1   1   1   0   0           1   1   1   1   1
-
-                   0   1   1   1   1   1   0               1   1   1   1   1
-
-                 0   0   1   1   1   1   1                   1   1   1   1   1
-
-               0   0   1   1   1   1   0                    1   1   1   1
-
-             0   0   0   0   0   1   0                               1
-    num_filters_list : list of int
-        A list of int where each int denotes the number of filters in
-        that layer.
-    num_rotations_list : int or list of int, optional
-        The number of rotations to use for each layer.
-        If num_rotations >= 1: weights of a kernel will be shared over
-            'num_rotations' many rotated versions of that kernel.
-        If only a single number is given, the same number of rotations will be
-        used for all layers.
-    azimuth_list : None, optional
-        A list of floats or scalar tf.tensors denoting the azimuth angle by
-        which the kernel of each layer is rotated.
-        Hexagonal kernel is turned by the angle 'azimuth' [given in degrees]
-        in counterclockwise direction.
-        If only a single azimuth angle is given, the same rotation is used for
-        all layers.
-        If azimuth is None, the hexagonal kernel is not rotated.
-    float_precision : tf.dtype, optional
-        The tensorflow dtype describing the float precision to use.
-    seed : int, optional
-        Seed for the random number generator.
-
-    Returns
-    -------
-    list of tf.Tensor
-        List of weight tensors for each layer.
-    list of tf.Tensor
-        List of bias tensors for each layer.
-    list of tf.Variable
-        A list of tensorflow variables created in this function
-    """
-    # create seed counter
-    cnt = SeedCounter(seed)
-
-    # create num_rotations_list
-    if isinstance(num_rotations_list, int):
-        num_rotations_list = [
-            num_rotations_list for i in range(len(num_filters_list))
-        ]
-    # create azimuth_list
-    if azimuth_list is None or tf.is_tensor(azimuth_list):
-        azimuth_list = [azimuth_list for i in range(len(num_filters_list))]
-
-    weights_list = []
-    biases_list = []
-    variable_list = []
-    for filter_size, num_filters, num_rotations, azimuth in zip(
-        filter_size_list,
-        num_filters_list,
-        num_rotations_list,
-        azimuth_list,
-    ):
-        if azimuth is not None:
-            kernel, var_list = rotation.get_dynamic_rotation_hex_kernel(
-                filter_size,
-                azimuth,
-                float_precision=float_precision,
-                seed=cnt(),
-            )
-        else:
-            if num_rotations > 1:
-                kernel, var_list = rotation.get_rotated_hex_kernel(
-                    filter_size + [num_input_channels, num_filters],
-                    num_rotations,
-                    float_precision=float_precision,
-                    seed=cnt(),
-                )
-            else:
-                kernel, var_list = get_hex_kernel(
-                    filter_size + [num_input_channels, num_filters],
-                    float_precision=float_precision,
-                    seed=cnt(),
-                )
-
-        variable_list.extend(var_list)
-        weights_list.append(kernel)
-        biases_list.append(
-            new_biases(
-                length=num_filters * num_rotations,
-                float_precision=float_precision,
-                seed=cnt(),
-            )
-        )
-        num_input_channels = num_filters
-
-    return weights_list, biases_list, variable_list
